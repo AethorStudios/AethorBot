@@ -182,7 +182,7 @@ class Management(commands.Cog):
                 chan = self.bot.get_channel(LOG_CHANNEL_ID)
                 if isinstance(chan, discord.TextChannel):
                     try:
-                        await chan.send("[Aethor] Nightly whitelist sync skipped: RCON disabled.")
+                        await chan.send("Nightly whitelist sync skipped: RCON disabled.")
                     except Exception:
                         pass
             return
@@ -196,7 +196,7 @@ class Management(commands.Cog):
                 chan = self.bot.get_channel(LOG_CHANNEL_ID)
                 if isinstance(chan, discord.TextChannel):
                     try:
-                        await chan.send("[Aethor] Nightly whitelist sync failed: unable to fetch server list via RCON.")
+                        await chan.send("Nightly whitelist sync failed: unable to fetch server list via RCON.")
                     except Exception:
                         pass
             return
@@ -224,7 +224,7 @@ class Management(commands.Cog):
             if isinstance(chan, discord.TextChannel):
                 ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
                 msg = (
-                    f"[Aethor] Nightly whitelist sync ({ts})\n"
+                    f"Nightly whitelist sync ({ts})\n"
                     f"Added: {added} (local→server)\n"
                     f"Removed: {removed}{' (extras pruned)' if AUTO_SYNC_REMOVE_EXTRAS else ''}"
                 )
@@ -301,7 +301,7 @@ class Management(commands.Cog):
             chan = self.bot.get_channel(LOG_CHANNEL_ID)
             if isinstance(chan, discord.TextChannel):
                 ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
-                msg = f"[Aethor] Manual whitelist sync by {ctx.author.mention} ({ts})\n" + "\n".join(summary)
+                msg = f"Manual whitelist sync by {ctx.author.mention} ({ts})\n" + "\n".join(summary)
                 try:
                     await chan.send(msg)
                 except Exception:
@@ -359,7 +359,7 @@ class Management(commands.Cog):
             chan = self.bot.get_channel(LOG_CHANNEL_ID)
             if isinstance(chan, discord.TextChannel):
                 ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
-                msg = f"[Aethor] Manual whitelist sync by {interaction.user.mention} ({ts})\n" + "\n".join(summary)
+                msg = f"Manual whitelist sync by {interaction.user.mention} ({ts})\n" + "\n".join(summary)
                 try:
                     await chan.send(msg)
                 except Exception:
@@ -503,7 +503,7 @@ class Management(commands.Cog):
             if isinstance(chan, discord.TextChannel):
                 try:
                     await chan.send(
-                        f"[Aethor] Whitelist import by {interaction.user.mention}: added {added}, already {already}."
+                        f"Whitelist import by {interaction.user.mention}: added {added}, already {already}."
                         + (f" RCON applied {rcon_applied}." if apply_rcon and rcon_applied else "")
                     )
                 except Exception:

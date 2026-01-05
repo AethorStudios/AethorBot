@@ -5,8 +5,8 @@ import sys
 import time
 
 import discord
-from pretty_help import PrettyHelp
 from discord.ext import commands
+from pretty_help import PrettyHelp
 
 from src.config import (
     APPLICATION_ID,

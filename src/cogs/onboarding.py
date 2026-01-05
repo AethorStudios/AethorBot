@@ -49,7 +49,7 @@ class Onboarding(commands.Cog):
             chan = self.bot.get_channel(VERIFY_LOG_CHANNEL_ID)
             if isinstance(chan, discord.TextChannel):
                 try:
-                    await chan.send(f"[Aethor] Verified {interaction.user.mention} as {mc_name} (UUID {uuid}).")
+                    await chan.send(f"Verified {interaction.user.mention} as {mc_name} (UUID {uuid}).")
                 except Exception:
                     pass
 
@@ -93,7 +93,9 @@ class Onboarding(commands.Cog):
             chan = self.bot.get_channel(VERIFY_LOG_CHANNEL_ID)
             if isinstance(chan, discord.TextChannel):
                 try:
-                    await chan.send(f"[Aethor] Admin {interaction.user.mention} verified {user.mention} as {mc_name} (UUID {uuid}).")
+                    await chan.send(
+                        f"Admin {interaction.user.mention} verified {user.mention} as {mc_name} (UUID {uuid})."
+                    )
                 except Exception:
                     pass
 
@@ -160,7 +162,7 @@ class Onboarding(commands.Cog):
             chan = self.bot.get_channel(VERIFY_LOG_CHANNEL_ID)
             if isinstance(chan, discord.TextChannel):
                 try:
-                    await chan.send(f"[Aethor] Unverified {interaction.user.mention} (was {mc_name}).")
+                    await chan.send(f"Unverified {interaction.user.mention} (was {mc_name}).")
                 except Exception:
                     pass
 
@@ -211,7 +213,7 @@ class Onboarding(commands.Cog):
             if isinstance(chan, discord.TextChannel):
                 try:
                     await chan.send(
-                        f"[Aethor] Admin {interaction.user.mention} unverifed {user.mention} (was {mc_name or 'unknown'})."
+                        f"Admin {interaction.user.mention} unverifed {user.mention} (was {mc_name or 'unknown'})."
                     )
                 except Exception:
                     pass
