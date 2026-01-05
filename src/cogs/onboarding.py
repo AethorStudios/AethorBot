@@ -18,7 +18,7 @@ class Onboarding(commands.Cog):
 
     @app_commands.command(name="verify", description="Link your Minecraft name and get verified")
     @app_commands.describe(name="Your Minecraft in-game name")
-    async def verify_slash(self, interaction: discord.Interaction, name: str):
+    async def verify_self(self, interaction: discord.Interaction, name: str):
         await interaction.response.defer(ephemeral=True)
         uuid, exact = await fetch_uuid(name)
         if not uuid:
@@ -57,68 +57,9 @@ class Onboarding(commands.Cog):
 
         await interaction.followup.send(msg.strip(), ephemeral=True)
 
-    @app_commands.command(name="verify_user", description="Admin: Verify a user with given Minecraft name")
-    @app_commands.describe(user="Discord user to verify", name="Minecraft in-game name")
-    @app_commands.default_permissions(administrator=True)
-    @app_commands.checks.has_permissions(administrator=True)
-    async def verify_user_slash(self, interaction: discord.Interaction, user: discord.User, name: str):
-        await interaction.response.defer(ephemeral=True)
-        uuid, exact = await fetch_uuid(name)
-        if not uuid:
-            await interaction.followup.send("Could not find that Minecraft name. Check spelling.", ephemeral=True)
-            return
-        mc_name = exact or name
-        set_player(user.id, mc_name, uuid)
-
-        added = add_to_whitelist(mc_name)
-        msg = f"Linked {mc_name} (UUID: {uuid}) to {user.mention}. "
-        msg += "Added to whitelist. " if added else "Already on whitelist. "
-
-        if rcon.is_enabled() and added:
-            try:
-                r = rcon.whitelist_add(mc_name)
-                msg += f"RCON: {r} "
-            except Exception as e:
-                msg += f"RCON failed: {e} "
-
-        if CONFIG.roles.verified_role_id:
-            try:
-                role = interaction.guild.get_role(CONFIG.roles.verified_role_id) if interaction.guild else None
-                member = interaction.guild.get_member(user.id) if interaction.guild else None
-                if isinstance(role, discord.Role) and isinstance(member, discord.Member):
-                    await member.add_roles(role, reason="Admin verification")
-                    msg += f"Granted role {role.name}. "
-            except Exception:
-                pass
-
-        if CONFIG.channels.verify_log_channel_id:
-            chan = self.bot.get_channel(CONFIG.channels.verify_log_channel_id)
-            if isinstance(chan, discord.TextChannel):
-                try:
-                    await chan.send(
-                        f"Admin {interaction.user.mention} verified {user.mention} as {mc_name} (UUID {uuid})."
-                    )
-                except Exception:
-                    pass
-
-        await interaction.followup.send(msg.strip(), ephemeral=True)
-
-    @app_commands.command(name="whois", description="Look up a user's linked Minecraft account")
-    @app_commands.describe(user="Discord user to look up")
-    @app_commands.checks.has_role(CONFIG.roles.verified_role_id)
-    async def whois_slash(self, interaction: discord.Interaction, user: discord.User | None = None):
-        target = user or interaction.user
-        record = get_player(target.id)
-        if not record:
-            await interaction.response.send_message("No linked account.", ephemeral=True)
-            return
-        await interaction.response.send_message(
-            f"{target.mention}: {record.get('name')} (UUID: {record.get('uuid')})", ephemeral=True
-        )
-
     @app_commands.command(name="unverify", description="Remove your verification, role, and whitelist entry")
     @app_commands.checks.has_role(CONFIG.roles.verified_role_id)
-    async def unverify_slash(self, interaction: discord.Interaction):
+    async def unverify_self(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
         record = get_player(interaction.user.id)
         if not record:
@@ -170,10 +111,56 @@ class Onboarding(commands.Cog):
 
         await interaction.followup.send((removed_msg + role_msg + "Unverified.").strip(), ephemeral=True)
 
+    @app_commands.command(name="verify_user", description="Admin: Verify a user with given Minecraft name")
+    @app_commands.describe(user="Discord user to verify", name="Minecraft in-game name")
+    @app_commands.default_permissions(administrator=True)
+    @app_commands.checks.has_permissions(administrator=True)
+    async def verify_other_user(self, interaction: discord.Interaction, user: discord.User, name: str):
+        await interaction.response.defer(ephemeral=True)
+        uuid, exact = await fetch_uuid(name)
+        if not uuid:
+            await interaction.followup.send("Could not find that Minecraft name. Check spelling.", ephemeral=True)
+            return
+        mc_name = exact or name
+        set_player(user.id, mc_name, uuid)
+
+        added = add_to_whitelist(mc_name)
+        msg = f"Linked {mc_name} (UUID: {uuid}) to {user.mention}. "
+        msg += "Added to whitelist. " if added else "Already on whitelist. "
+
+        if rcon.is_enabled() and added:
+            try:
+                r = rcon.whitelist_add(mc_name)
+                msg += f"RCON: {r} "
+            except Exception as e:
+                msg += f"RCON failed: {e} "
+
+        if CONFIG.roles.verified_role_id:
+            try:
+                role = interaction.guild.get_role(CONFIG.roles.verified_role_id) if interaction.guild else None
+                member = interaction.guild.get_member(user.id) if interaction.guild else None
+                if isinstance(role, discord.Role) and isinstance(member, discord.Member):
+                    await member.add_roles(role, reason="Admin verification")
+                    msg += f"Granted role {role.name}. "
+            except Exception:
+                pass
+
+        if CONFIG.channels.verify_log_channel_id:
+            chan = self.bot.get_channel(CONFIG.channels.verify_log_channel_id)
+            if isinstance(chan, discord.TextChannel):
+                try:
+                    await chan.send(
+                        f"Admin {interaction.user.mention} verified {user.mention} as {mc_name} (UUID {uuid})."
+                    )
+                except Exception:
+                    pass
+
+        await interaction.followup.send(msg.strip(), ephemeral=True)
+
     @app_commands.command(name="unverify_user", description="Admin: Unverify a user, remove role and whitelist")
     @app_commands.default_permissions(administrator=True)
     @app_commands.checks.has_permissions(administrator=True)
-    async def unverify_user_slash(self, interaction: discord.Interaction, user: discord.User):
+    async def unverify_other_user(self, interaction: discord.Interaction, user: discord.User):
         await interaction.response.defer(ephemeral=True)
         record = get_player(user.id)
         mc_name = record.get("name") if record else None
@@ -221,6 +208,19 @@ class Onboarding(commands.Cog):
                     pass
 
         await interaction.followup.send((removed_msg + role_msg + "User unverified.").strip(), ephemeral=True)
+
+    @app_commands.command(name="whois", description="Look up a user's linked Minecraft account")
+    @app_commands.describe(user="Discord user to look up")
+    @app_commands.checks.has_role(CONFIG.roles.verified_role_id)
+    async def whois_user(self, interaction: discord.Interaction, user: discord.User | None = None):
+        target = user or interaction.user
+        record = get_player(target.id)
+        if not record:
+            await interaction.response.send_message("No linked account.", ephemeral=True)
+            return
+        await interaction.response.send_message(
+            f"{target.mention}: {record.get('name')} (UUID: {record.get('uuid')})", ephemeral=True
+        )
 
 
 async def setup(bot: commands.Bot):
