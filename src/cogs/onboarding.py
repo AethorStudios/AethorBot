@@ -2,12 +2,14 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from src.config import VERIFIED_ROLE_ID, VERIFY_LOG_CHANNEL_ID
+from src.config import ConfigModel, get_config
 from src.utils import rcon
 from src.utils.mc_online import is_player_online
 from src.utils.mojang import fetch_uuid
 from src.utils.players import delete_player, get_player, set_player
 from src.utils.store import add_to_whitelist, remove_from_whitelist
+
+CONFIG: ConfigModel = get_config()
 
 
 class Onboarding(commands.Cog):
@@ -36,17 +38,17 @@ class Onboarding(commands.Cog):
             except Exception as e:
                 msg += f"RCON failed: {e} "
 
-        if VERIFIED_ROLE_ID:
+        if CONFIG.roles.verified_role_id:
             try:
-                role = interaction.guild.get_role(VERIFIED_ROLE_ID) if interaction.guild else None
+                role = interaction.guild.get_role(CONFIG.roles.verified_role_id) if interaction.guild else None
                 if isinstance(role, discord.Role) and isinstance(interaction.user, discord.Member):
                     await interaction.user.add_roles(role, reason="Verification")
                     msg += f"Granted role {role.name}. "
             except Exception:
                 pass
 
-        if VERIFY_LOG_CHANNEL_ID:
-            chan = self.bot.get_channel(VERIFY_LOG_CHANNEL_ID)
+        if CONFIG.channels.verify_log_channel_id:
+            chan = self.bot.get_channel(CONFIG.channels.verify_log_channel_id)
             if isinstance(chan, discord.TextChannel):
                 try:
                     await chan.send(f"Verified {interaction.user.mention} as {mc_name} (UUID {uuid}).")
@@ -79,9 +81,9 @@ class Onboarding(commands.Cog):
             except Exception as e:
                 msg += f"RCON failed: {e} "
 
-        if VERIFIED_ROLE_ID:
+        if CONFIG.roles.verified_role_id:
             try:
-                role = interaction.guild.get_role(VERIFIED_ROLE_ID) if interaction.guild else None
+                role = interaction.guild.get_role(CONFIG.roles.verified_role_id) if interaction.guild else None
                 member = interaction.guild.get_member(user.id) if interaction.guild else None
                 if isinstance(role, discord.Role) and isinstance(member, discord.Member):
                     await member.add_roles(role, reason="Admin verification")
@@ -89,8 +91,8 @@ class Onboarding(commands.Cog):
             except Exception:
                 pass
 
-        if VERIFY_LOG_CHANNEL_ID:
-            chan = self.bot.get_channel(VERIFY_LOG_CHANNEL_ID)
+        if CONFIG.channels.verify_log_channel_id:
+            chan = self.bot.get_channel(CONFIG.channels.verify_log_channel_id)
             if isinstance(chan, discord.TextChannel):
                 try:
                     await chan.send(
@@ -103,7 +105,7 @@ class Onboarding(commands.Cog):
 
     @app_commands.command(name="whois", description="Look up a user's linked Minecraft account")
     @app_commands.describe(user="Discord user to look up")
-    @app_commands.checks.has_role(VERIFIED_ROLE_ID)
+    @app_commands.checks.has_role(CONFIG.roles.verified_role_id)
     async def whois_slash(self, interaction: discord.Interaction, user: discord.User | None = None):
         target = user or interaction.user
         record = get_player(target.id)
@@ -115,7 +117,7 @@ class Onboarding(commands.Cog):
         )
 
     @app_commands.command(name="unverify", description="Remove your verification, role, and whitelist entry")
-    @app_commands.checks.has_role(VERIFIED_ROLE_ID)
+    @app_commands.checks.has_role(CONFIG.roles.verified_role_id)
     async def unverify_slash(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
         record = get_player(interaction.user.id)
@@ -145,8 +147,8 @@ class Onboarding(commands.Cog):
 
         # Remove verified role
         role_msg = ""
-        if VERIFIED_ROLE_ID and isinstance(interaction.user, discord.Member):
-            role = interaction.guild.get_role(VERIFIED_ROLE_ID) if interaction.guild else None
+        if CONFIG.roles.verified_role_id and isinstance(interaction.user, discord.Member):
+            role = interaction.guild.get_role(CONFIG.roles.verified_role_id) if interaction.guild else None
             if isinstance(role, discord.Role):
                 try:
                     await interaction.user.remove_roles(role, reason="Unverify")
@@ -158,8 +160,8 @@ class Onboarding(commands.Cog):
         delete_player(interaction.user.id)
 
         # Log
-        if VERIFY_LOG_CHANNEL_ID:
-            chan = self.bot.get_channel(VERIFY_LOG_CHANNEL_ID)
+        if CONFIG.channels.verify_log_channel_id:
+            chan = self.bot.get_channel(CONFIG.channels.verify_log_channel_id)
             if isinstance(chan, discord.TextChannel):
                 try:
                     await chan.send(f"Unverified {interaction.user.mention} (was {mc_name}).")
@@ -195,9 +197,9 @@ class Onboarding(commands.Cog):
                     removed_msg += f"RCON failed: {e} "
 
         role_msg = ""
-        if VERIFIED_ROLE_ID:
+        if CONFIG.roles.verified_role_id:
             member = interaction.guild.get_member(user.id) if interaction.guild else None
-            role = interaction.guild.get_role(VERIFIED_ROLE_ID) if interaction.guild else None
+            role = interaction.guild.get_role(CONFIG.roles.verified_role_id) if interaction.guild else None
             if isinstance(member, discord.Member) and isinstance(role, discord.Role):
                 try:
                     await member.remove_roles(role, reason="Admin unverify")
@@ -208,8 +210,8 @@ class Onboarding(commands.Cog):
         if record:
             delete_player(user.id)
 
-        if VERIFY_LOG_CHANNEL_ID:
-            chan = self.bot.get_channel(VERIFY_LOG_CHANNEL_ID)
+        if CONFIG.channels.verify_log_channel_id:
+            chan = self.bot.get_channel(CONFIG.channels.verify_log_channel_id)
             if isinstance(chan, discord.TextChannel):
                 try:
                     await chan.send(

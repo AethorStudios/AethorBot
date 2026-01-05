@@ -3,7 +3,9 @@ from discord import app_commands
 from discord.ext import commands
 from mcstatus import JavaServer
 
-from src.config import MC_SERVER
+from src.config import ConfigModel, get_config
+
+CONFIG: ConfigModel = get_config()
 
 
 async def query_status(address: str):
@@ -18,7 +20,7 @@ class Minecraft(commands.Cog):
 
     @commands.command(name="mcstatus")
     async def mcstatus_prefix(self, ctx: commands.Context, address: str = ""):
-        addr = address or MC_SERVER
+        addr = address or CONFIG.minecraft.address
         if not addr:
             await ctx.reply("No server provided. Set `MC_SERVER` or pass an address.")
             return
@@ -35,7 +37,7 @@ class Minecraft(commands.Cog):
     @app_commands.command(name="mcstatus", description="Check Minecraft server status")
     @app_commands.describe(address="Server address (host[:port])")
     async def mcstatus_slash(self, interaction: discord.Interaction, address: str | None = None):
-        addr = address or MC_SERVER
+        addr = address or CONFIG.minecraft.address
         if not addr:
             await interaction.response.send_message(
                 "No server provided. Set `MC_SERVER` or pass an address.", ephemeral=True

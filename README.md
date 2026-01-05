@@ -20,29 +20,15 @@ A Python Discord bot for Minecraft MMORPG server, Aethor.
    poetry install
    ```
 3. Configure environment:
-   - Copy `.env.example` to `.env`
-   - Set `DISCORD_TOKEN`, optional `GUILD_ID`, `MC_SERVER`
+   - Run the bot once to generate `config.yaml`, then fill it out.
 4. Smoke-check (no token needed):
    ```powershell
    poetry run python -m src.bot --check
    ```
-5. Run bot (requires `DISCORD_TOKEN`):
+5. Run bot:
    ```powershell
    poetry run python -m src.bot --sync
    ```
-
-## Environment Variables
-- `DISCORD_TOKEN`: Discord bot token (required to run)
-- `GUILD_ID`: Guild ID for faster slash sync (optional)
-- `ADMIN_ROLE_IDS`: Comma-separated role IDs with admin powers (optional)
-- `MC_SERVER`: Default server address, e.g. `play.example.com:25565`
- - Data files are stored under `data/` (e.g., `whitelist.json`).
- - Onboarding:
-    - `VERIFIED_ROLE_ID`: Role to grant upon successful verification (optional)
-    - `VERIFY_LOG_CHANNEL_ID`: Channel to log verifications (optional)
- - Moderation:
-    - `MOD_LOG_CHANNEL_ID`: Channel to receive moderation action logs
-    - `MUTE_ROLE_ID`: Role to use for `/mute` (optional)
 
 ## Notes
 - Prefix commands use `!`. Slash commands are under the bot's app commands.
@@ -73,26 +59,25 @@ A Python Discord bot for Minecraft MMORPG server, Aethor.
    The extension loading has been updated to async to avoid the "load_extension was never awaited" warning.
 
 ## Healthcheck
-- Enable via env: `HEALTHCHECK_ENABLED=true`.
+- Enable via config: `healthcheck.enabled: true`.
 - Port selection:
-   - If `HEALTHCHECK_PORT` is set, the server binds to that port.
+   - If `healthcheck.port` is set, the server binds to that port.
    - On Pterodactyl/Revivenode, the panel sets `PORT`; we auto-fallback to it if provided.
 - Endpoints: `GET /`, `/health`, `/healthz`, `/ready`, `/live` → returns JSON with `{ ok, uptime_seconds, guilds, latency_ms, ready }`.
 
 ## File Logging
-- Enable via env: `FILE_LOGS_ENABLED=true`.
+- Enable via config: `file_logs.enabled: true`.
 - Defaults: writes rotating logs to `logs/aethor.log` (1MB, 5 backups).
 - Customize with:
-   - `FILE_LOGS_PATH`, `FILE_LOGS_MAX_BYTES`, `FILE_LOGS_BACKUP_COUNT`.
+   - `file_logs.path`, `file_logs.max_bytes`, `file_logs.backup_count`.
 
 ## Revivenode Deployment
 - Create a Discord Bot service (Python) in the Revivenode panel (Pterodactyl).
 - Upload files via SFTP: `src/`, `data/`, `requirements.txt`, `.env.example`, `README.md`.
    - Data persistence: everything under `/home/container` persists; the bot uses `data/` for state.
-- Environment config (Panel → Variables or Startup): set at minimum `DISCORD_TOKEN`; optionally set `GUILD_ID`, `MC_SERVER`, `RCON_*`, `LOG_CHANNEL_ID`, `VERIFIED_ROLE_ID`, `VERIFY_LOG_CHANNEL_ID`, `MOD_LOG_CHANNEL_ID`, `MUTE_ROLE_ID`.
-   - Optional ops vars: `HEALTHCHECK_ENABLED`, `HEALTHCHECK_PORT` (panel may set `PORT`), `FILE_LOGS_ENABLED`, `FILE_LOGS_PATH`, `FILE_LOGS_MAX_BYTES`, `FILE_LOGS_BACKUP_COUNT`.
+   - Upload your filled `config.yaml` after the first run.
 - Startup command (Startup tab):
-   - `python -m src.bot --sync`
+   - `python -m src.bot --sync` (The first run will generate the `config.yaml` file. Fill it before running the bot again.)
    - After the first sync, you can use `python -m src.bot`.
 - Install dependencies (if the egg supports Auto-Install): click Install. Otherwise run in Console:
    ```bash
@@ -102,7 +87,7 @@ A Python Discord bot for Minecraft MMORPG server, Aethor.
    - Health: The panel may expose the assigned port for checks; the health endpoint returns 200 JSON when the bot is up.
 - RCON tips:
    - Ensure your Minecraft server `server.properties` has RCON enabled and the port open to the bot host.
-   - Use the server's public IP for `RCON_HOST` and the RCON port/password from your config.
+   - Use the server's public IP for `rcon.host` and the RCON port/password from your config.
 - Updates:
    - Upload changed files via SFTP, then restart. Use `/sync` to update slash commands when needed.
 
@@ -111,32 +96,18 @@ A Python Discord bot for Minecraft MMORPG server, Aethor.
    - `enable-rcon=true`
    - `rcon.port=25575` (default)
    - `rcon.password=your_password`
-- Configure `.env`:
-   - `RCON_ENABLED=true`
-   - `RCON_HOST=127.0.0.1` (or your server IP)
-   - `RCON_PORT=25575`
-   - `RCON_PASSWORD=your_password`
 - Behavior:
-   - When `RCON_ENABLED=true`, `whitelist_add`/`whitelist_remove` will also issue server commands via RCON.
+   - When `rcon.enabled: true`, `whitelist_add`/`whitelist_remove` will also issue server commands via RCON.
    - Use `/whitelist_list_server` to read the current server whitelist via RCON.
    - Local list is stored in `data/whitelist.json`; treat it as your source of truth for bot features.
 
 ## Auto Sync (Nightly)
-- Configure `.env`:
-   - `AUTO_SYNC_ENABLED=true`
-   - `AUTO_SYNC_HOUR=3` (24h format)
-   - `AUTO_SYNC_MINUTE=0`
-   - `AUTO_SYNC_REMOVE_EXTRAS=false` (set `true` to remove server-only names)
-   - `LOG_CHANNEL_ID=<channel_id>` (optional: posts nightly summary there)
 - Behavior:
    - Runs daily at the configured time and applies local list to server.
-   - Respects `AUTO_SYNC_REMOVE_EXTRAS` for removal.
-   - Posts summary to `LOG_CHANNEL_ID` when set; reports skipped/error states.
+   - Respects `auto_sync.remove_extras` for removal.
+   - Posts summary to `channels.log_channel_id` when set; reports skipped/error states.
 
 ## Backups
-- Environment:
-   - `BACKUP_ENABLED=true` — enable timestamped backups of `whitelist.json`.
-   - `BACKUP_MAX_KEEP=10` — retain last N backups in `data/backups/`.
 - When Backups Run:
    - After `/whitelist_import` completes.
    - After manual `/whitelist_sync` and `!wlsync` complete.

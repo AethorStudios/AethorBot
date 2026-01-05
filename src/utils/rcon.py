@@ -1,16 +1,18 @@
 from mcrcon import MCRcon
 
-from src.config import RCON_ENABLED, RCON_HOST, RCON_PASSWORD, RCON_PORT
+from src.config import ConfigModel, get_config
+
+CONFIG: ConfigModel = get_config()
 
 
 def is_enabled() -> bool:
-    return RCON_ENABLED and RCON_PASSWORD != ""
+    return CONFIG.rcon.enabled and CONFIG.rcon.password.get_secret_value() != ""
 
 
 def send_command(cmd: str) -> str:
     if not is_enabled():
         raise RuntimeError("RCON is not enabled or missing password.")
-    with MCRcon(RCON_HOST, RCON_PASSWORD, port=RCON_PORT) as mcr:
+    with MCRcon(CONFIG.rcon.host, CONFIG.rcon.password.get_secret_value, port=CONFIG.rcon.port) as mcr:
         resp = mcr.command(cmd)
         return resp or ""
 

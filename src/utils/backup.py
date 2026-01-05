@@ -3,11 +3,13 @@ import glob
 import json
 import os
 
-from src.config import BACKUP_ENABLED, BACKUP_MAX_KEEP
+from src.config import ConfigModel, get_config
 from src.utils.store import read_whitelist
 
 BASE_DIR = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "data"))
 BACKUP_DIR = os.path.join(BASE_DIR, "backups")
+
+CONFIG: ConfigModel = get_config()
 
 
 def ensure_dir() -> None:
@@ -22,11 +24,11 @@ def list_backups() -> list[str]:
 
 def prune_old_backups() -> None:
     files = list_backups()
-    if BACKUP_MAX_KEEP <= 0:
+    if CONFIG.backup.max_keep <= 0:
         return
-    if len(files) <= BACKUP_MAX_KEEP:
+    if len(files) <= CONFIG.backup.max_keep:
         return
-    to_delete = files[0 : len(files) - BACKUP_MAX_KEEP]
+    to_delete = files[0 : len(files) - CONFIG.backup.max_keep]
     for f in to_delete:
         try:
             os.remove(f)
@@ -35,7 +37,7 @@ def prune_old_backups() -> None:
 
 
 def backup_whitelist() -> str | None:
-    if not BACKUP_ENABLED:
+    if not CONFIG.backup.enabled:
         return None
     ensure_dir()
     now = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")

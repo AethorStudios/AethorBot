@@ -1,7 +1,9 @@
 from mcstatus import JavaServer
 
-from src.config import MC_SERVER
+from src.config import ConfigModel, get_config
 from src.utils import rcon
+
+CONFIG: ConfigModel = get_config()
 
 
 def _parse_list_output(raw: str) -> list[str]:
@@ -23,10 +25,10 @@ async def online_players() -> list[str]:
             pass
 
     # Fallback to mcstatus
-    if not MC_SERVER:
+    if not CONFIG.minecraft.address:
         return []
     try:
-        server = JavaServer.lookup(MC_SERVER)
+        server = JavaServer.lookup(CONFIG.minecraft.address)
         # Try full query first (requires enable-query=true on server)
         try:
             q = await server.async_query()

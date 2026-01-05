@@ -4,8 +4,10 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from src.config import MUTE_ROLE_ID
+from src.config import ConfigModel, get_config
 from src.utils.modlog import send_mod_log
+
+CONFIG: ConfigModel = get_config()
 
 
 class Moderation(commands.Cog):
@@ -101,14 +103,11 @@ class Moderation(commands.Cog):
             await interaction.response.send_message(f"Failed to untimeout: {e}", ephemeral=True)
 
     # Mute / Unmute via role (optional)
-    @app_commands.command(name="mute", description="Mute by adding the MUTE_ROLE_ID role")
+    @app_commands.command(name="mute", description="Mute a user by adding the muted role")
     @app_commands.default_permissions(moderate_members=True)
     @app_commands.checks.has_permissions(moderate_members=True)
     async def mute_slash(self, interaction: discord.Interaction, member: discord.Member, reason: str | None = None):
-        if not MUTE_ROLE_ID:
-            await interaction.response.send_message("MUTE_ROLE_ID not set.", ephemeral=True)
-            return
-        role = interaction.guild.get_role(MUTE_ROLE_ID)
+        role = interaction.guild.get_role(CONFIG.roles.mute_role_id)
         if not isinstance(role, discord.Role):
             await interaction.response.send_message("Mute role not found.", ephemeral=True)
             return
@@ -121,14 +120,11 @@ class Moderation(commands.Cog):
         except Exception as e:
             await interaction.response.send_message(f"Failed to mute: {e}", ephemeral=True)
 
-    @app_commands.command(name="unmute", description="Unmute by removing the MUTE_ROLE_ID role")
+    @app_commands.command(name="unmute", description="Unmute a user by removing the muted role")
     @app_commands.default_permissions(moderate_members=True)
     @app_commands.checks.has_permissions(moderate_members=True)
     async def unmute_slash(self, interaction: discord.Interaction, member: discord.Member, reason: str | None = None):
-        if not MUTE_ROLE_ID:
-            await interaction.response.send_message("MUTE_ROLE_ID not set.", ephemeral=True)
-            return
-        role = interaction.guild.get_role(MUTE_ROLE_ID)
+        role = interaction.guild.get_role(CONFIG.roles.mute_role_id)
         if not isinstance(role, discord.Role):
             await interaction.response.send_message("Mute role not found.", ephemeral=True)
             return
