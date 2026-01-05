@@ -2,22 +2,17 @@ import logging
 import os
 from logging.handlers import RotatingFileHandler
 
-from src.config import (
-    FILE_LOGS_BACKUP_COUNT,
-    FILE_LOGS_ENABLED,
-    FILE_LOGS_MAX_BYTES,
-    FILE_LOGS_PATH,
-)
+from src.config import ConfigModel
 
 
-def setup_logging(level: int = logging.INFO) -> None:
+def setup_logging(config: ConfigModel, level: int = logging.INFO) -> None:
     logging.basicConfig(level=level, format="[%(asctime)s] %(levelname)s:%(name)s: %(message)s")
 
-    if FILE_LOGS_ENABLED:
+    if config.file_logs.enabled:
         try:
-            os.makedirs(os.path.dirname(FILE_LOGS_PATH), exist_ok=True)
+            os.makedirs(os.path.dirname(config.file_logs.path), exist_ok=True)
             file_handler = RotatingFileHandler(
-                FILE_LOGS_PATH, maxBytes=FILE_LOGS_MAX_BYTES, backupCount=FILE_LOGS_BACKUP_COUNT
+                config.file_logs.path, maxBytes=config.file_logs.max_bytes, backupCount=config.file_logs.backup_count
             )
             file_handler.setFormatter(logging.Formatter("[%(asctime)s] %(levelname)s:%(name)s: %(message)s"))
             root_logger = logging.getLogger()

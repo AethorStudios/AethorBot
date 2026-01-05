@@ -2,22 +2,9 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from src.config import ADMIN_ROLE_IDS, GUILD_ID
+from src.config import ConfigModel, get_config
 
-
-def user_is_admin(ctx_or_interaction) -> bool:
-    # Works for both Context (prefix) and Interaction (slash)
-    if hasattr(ctx_or_interaction, "user"):
-        member = ctx_or_interaction.user
-    else:
-        member = ctx_or_interaction.author
-
-    if isinstance(member, discord.Member):
-        if member.guild_permissions.administrator:
-            return True
-        if ADMIN_ROLE_IDS and any(r.id in ADMIN_ROLE_IDS for r in member.roles):
-            return True
-    return False
+CONFIG: ConfigModel = get_config()
 
 
 class Admin(commands.Cog):
@@ -25,7 +12,7 @@ class Admin(commands.Cog):
         self.bot = bot
 
     @commands.command(name="reload")
-    @commands.is_owner()
+    @commands.has_permissions(administrator=True)
     async def reload_prefix(self, ctx: commands.Context, extension: str = ""):
         if not extension:
             for ext in list(self.bot.extensions.keys()):
@@ -43,14 +30,12 @@ class Admin(commands.Cog):
             await ctx.reply(f"Failed to reload `{extension}`: {e}")
 
     @commands.command(name="sync")
+    @commands.has_permissions(administrator=True)
     async def sync_prefix(self, ctx: commands.Context):
-        if not user_is_admin(ctx):
-            await ctx.reply("You lack permissions to sync commands.")
-            return
         try:
-            if GUILD_ID:
-                await self.bot.tree.sync(guild=discord.Object(id=GUILD_ID))
-                await ctx.reply(f"Synced slash commands to guild {GUILD_ID}.")
+            if CONFIG.discord.guild_id:
+                await self.bot.tree.sync(guild=discord.Object(id=CONFIG.discord.guild_id))
+                await ctx.reply(f"Synced slash commands to guild {CONFIG.discord.guild_id}.")
             else:
                 await self.bot.tree.sync()
                 await ctx.reply("Synced global slash commands.")
@@ -65,14 +50,14 @@ class Admin(commands.Cog):
 
     @app_commands.command(name="sync", description="Sync application commands")
     @app_commands.default_permissions(administrator=True)
+    @app_commands.checks.has_permissions(administrator=True)
     async def sync_slash(self, interaction: discord.Interaction):
-        if not user_is_admin(interaction):
-            await interaction.response.send_message("Insufficient permissions.", ephemeral=True)
-            return
         try:
-            if GUILD_ID:
-                await self.bot.tree.sync(guild=discord.Object(id=GUILD_ID))
-                await interaction.response.send_message(f"Synced slash commands to guild {GUILD_ID}.", ephemeral=True)
+            if CONFIG.discord.guild_id:
+                await self.bot.tree.sync(guild=discord.Object(id=CONFIG.discord.guild_id))
+                await interaction.response.send_message(
+                    f"Synced slash commands to guild {CONFIG.discord.guild_id}.", ephemeral=True
+                )
             else:
                 await self.bot.tree.sync()
                 await interaction.response.send_message("Synced global slash commands.", ephemeral=True)

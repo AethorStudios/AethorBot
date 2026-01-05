@@ -6,17 +6,13 @@ import time
 
 import discord
 from discord.ext import commands
+from pretty_help import PrettyHelp
 
-from src.config import (
-    APPLICATION_ID,
-    DISCORD_TOKEN,
-    GUILD_ID,
-    HEALTHCHECK_ENABLED,
-    HEALTHCHECK_PORT,
-    require_token,
-)
+from src.config import ConfigModel, load_config
 from src.utils.health import make_status_func, start_health_server
 from src.utils.logger import setup_logging
+
+config = load_config("./config.yaml", update_if_has_string="token: CHANGE_ME")
 
 
 async def load_cogs(bot: commands.Bot) -> None:
@@ -37,23 +33,33 @@ async def load_cogs(bot: commands.Bot) -> None:
 
 
 class AethorBot(commands.Bot):
+    def __init__(self, *, config: ConfigModel, **kwargs):
+        super().__init__(**kwargs)
+        self.config = config
+
     async def setup_hook(self) -> None:
         await load_cogs(self)
         # Start healthcheck server after cogs load
-        if HEALTHCHECK_ENABLED:
+        if self.config.healthcheck.enabled:
             started_at = getattr(self, "_started_at", time.time())
             self._started_at = started_at
             try:
-                start_health_server(HEALTHCHECK_PORT, make_status_func(self, started_at))
-                logging.getLogger("Aethor").info(f"Healthcheck server listening on :{HEALTHCHECK_PORT}")
+                start_health_server(self.config.healthcheck.port, make_status_func(self, started_at))
+                logging.getLogger("Aethor").info(f"Healthcheck server listening on :{self.config.healthcheck.port}")
             except Exception as e:
                 logging.getLogger("Aethor").warning(f"Failed to start healthcheck server: {e}")
 
 
-def build_bot() -> commands.Bot:
+def build_bot(config: ConfigModel) -> commands.Bot:
     intents = discord.Intents.default()
     intents.message_content = True  # for prefix commands
-    bot = AethorBot(command_prefix="!", intents=intents, application_id=APPLICATION_ID)
+    bot = AethorBot(
+        config=config,
+        command_prefix="!",
+        intents=intents,
+        application_id=config.discord.application_id,
+        help_command=PrettyHelp(),
+    )
     return bot
 
 
@@ -63,10 +69,13 @@ def main() -> None:
     parser.add_argument("--sync", action="store_true", help="Sync slash commands on ready.")
     args = parser.parse_args()
 
-    setup_logging()
+    if not args.check:
+        config.validate_required_runtime()
+
+    setup_logging(config)
     logger = logging.getLogger("Aethor")
 
-    bot = build_bot()
+    bot = build_bot(config)
 
     if args.check:
         # Load extensions in an async context to validate without running the bot
@@ -78,23 +87,22 @@ def main() -> None:
             logger.exception(f"Smoke-check failed during extension load: {e}")
             sys.exit(1)
 
-    require_token()
-
     @bot.event
     async def on_ready():
         logger.info(f"Logged in as {bot.user} (ID: {bot.user.id})")
         if args.sync:
             try:
-                if GUILD_ID:
-                    await bot.tree.sync(guild=discord.Object(id=GUILD_ID))
-                    logger.info(f"Synced slash commands to guild {GUILD_ID}")
+                if config.discord.guild_id:
+                    bot.tree.copy_global_to(guild=discord.Object(id=config.discord.guild_id))
+                    commands_synced = await bot.tree.sync(guild=discord.Object(id=config.discord.guild_id))
+                    logger.info(f"Synced {len(commands_synced)} slash commands to guild {config.discord.guild_id}")
                 else:
-                    await bot.tree.sync()
-                    logger.info("Synced global slash commands")
+                    commands_synced = await bot.tree.sync()
+                    logger.info(f"Synced {len(commands_synced)} global slash commands")
             except Exception as e:
                 logger.exception(f"Failed to sync commands: {e}")
 
-    bot.run(DISCORD_TOKEN, log_handler=None)
+    bot.run(config.discord.token.get_secret_value(), log_handler=None)
 
 
 if __name__ == "__main__":

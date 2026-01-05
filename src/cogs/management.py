@@ -8,14 +8,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands, tasks
 
-from src.config import (
-    AUTO_SYNC_ENABLED,
-    AUTO_SYNC_HOUR,
-    AUTO_SYNC_MINUTE,
-    AUTO_SYNC_REMOVE_EXTRAS,
-    LOG_CHANNEL_ID,
-    SYNC_COOLDOWN_SECONDS,
-)
+from src.config import ConfigModel, get_config
 from src.utils import rcon
 from src.utils.backup import backup_whitelist
 from src.utils.store import (
@@ -24,11 +17,13 @@ from src.utils.store import (
     remove_from_whitelist,
 )
 
+CONFIG: ConfigModel = get_config()
+
 
 class Management(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        if AUTO_SYNC_ENABLED:
+        if CONFIG.auto_sync.enabled:
             self.auto_sync_loop.start()
         self._sync_last: dict[int, datetime.datetime] = {}
 
@@ -37,7 +32,7 @@ class Management(commands.Cog):
         if not last:
             return 0
         delta = datetime.datetime.now() - last
-        remaining = SYNC_COOLDOWN_SECONDS - int(delta.total_seconds())
+        remaining = CONFIG.auto_sync.cooldown_seconds - int(delta.total_seconds())
         return remaining if remaining > 0 else 0
 
     # Role management (prefix)
@@ -64,6 +59,7 @@ class Management(commands.Cog):
     # Role management (slash)
     @app_commands.command(name="role_grant", description="Grant a role to a member")
     @app_commands.default_permissions(administrator=True)
+    @app_commands.checks.has_permissions(administrator=True)
     async def role_grant_slash(
         self, interaction: discord.Interaction, role: discord.Role, member: discord.Member | None = None
     ):
@@ -76,6 +72,7 @@ class Management(commands.Cog):
 
     @app_commands.command(name="role_revoke", description="Revoke a role from a member")
     @app_commands.default_permissions(administrator=True)
+    @app_commands.checks.has_permissions(administrator=True)
     async def role_revoke_slash(
         self, interaction: discord.Interaction, role: discord.Role, member: discord.Member | None = None
     ):
@@ -128,6 +125,7 @@ class Management(commands.Cog):
     # Whitelist management (slash)
     @app_commands.command(name="whitelist_add", description="Add a Minecraft name to whitelist")
     @app_commands.default_permissions(administrator=True)
+    @app_commands.checks.has_permissions(administrator=True)
     async def wl_add_slash(self, interaction: discord.Interaction, name: str):
         ok = add_to_whitelist(name)
         msg = f"Added `{name}` to whitelist." if ok else f"`{name}` already in whitelist or invalid."
@@ -141,6 +139,7 @@ class Management(commands.Cog):
 
     @app_commands.command(name="whitelist_remove", description="Remove a Minecraft name from whitelist")
     @app_commands.default_permissions(administrator=True)
+    @app_commands.checks.has_permissions(administrator=True)
     async def wl_remove_slash(self, interaction: discord.Interaction, name: str):
         ok = remove_from_whitelist(name)
         msg = f"Removed `{name}` from whitelist." if ok else f"`{name}` not found in whitelist."
@@ -154,6 +153,7 @@ class Management(commands.Cog):
 
     @app_commands.command(name="whitelist_list_server", description="List whitelisted names via RCON")
     @app_commands.default_permissions(administrator=True)
+    @app_commands.checks.has_permissions(administrator=True)
     async def wl_list_server_slash(self, interaction: discord.Interaction):
         if not rcon.is_enabled():
             await interaction.response.send_message("RCON not enabled.", ephemeral=True)
@@ -169,15 +169,15 @@ class Management(commands.Cog):
             await interaction.response.send_message(f"RCON failed: {e}", ephemeral=True)
 
     # Scheduled auto-sync via tasks.loop
-    @tasks.loop(time=datetime.time(hour=AUTO_SYNC_HOUR, minute=AUTO_SYNC_MINUTE))
+    @tasks.loop(time=datetime.time(hour=CONFIG.auto_sync.hour, minute=CONFIG.auto_sync.minute))
     async def auto_sync_loop(self):
         if not rcon.is_enabled():
             # Optionally announce skipped run
-            if LOG_CHANNEL_ID:
-                chan = self.bot.get_channel(LOG_CHANNEL_ID)
+            if CONFIG.channels.log_channel_id:
+                chan = self.bot.get_channel(CONFIG.channels.log_channel_id)
                 if isinstance(chan, discord.TextChannel):
                     try:
-                        await chan.send("[Aethor] Nightly whitelist sync skipped: RCON disabled.")
+                        await chan.send("Nightly whitelist sync skipped: RCON disabled.")
                     except Exception:
                         pass
             return
@@ -187,17 +187,17 @@ class Management(commands.Cog):
             server = set(rcon.whitelist_list())
         except Exception:
             # Optionally announce error
-            if LOG_CHANNEL_ID:
-                chan = self.bot.get_channel(LOG_CHANNEL_ID)
+            if CONFIG.channels.log_channel_id:
+                chan = self.bot.get_channel(CONFIG.channels.log_channel_id)
                 if isinstance(chan, discord.TextChannel):
                     try:
-                        await chan.send("[Aethor] Nightly whitelist sync failed: unable to fetch server list via RCON.")
+                        await chan.send("Nightly whitelist sync failed: unable to fetch server list via RCON.")
                     except Exception:
                         pass
             return
 
         to_add = sorted(local - server)
-        to_remove = sorted(server - local) if AUTO_SYNC_REMOVE_EXTRAS else []
+        to_remove = sorted(server - local) if CONFIG.auto_sync.remove_extras else []
 
         added = 0
         removed = 0
@@ -214,14 +214,14 @@ class Management(commands.Cog):
             except Exception:
                 pass
 
-        if LOG_CHANNEL_ID:
-            chan = self.bot.get_channel(LOG_CHANNEL_ID)
+        if CONFIG.channels.log_channel_id:
+            chan = self.bot.get_channel(CONFIG.channels.log_channel_id)
             if isinstance(chan, discord.TextChannel):
                 ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
                 msg = (
-                    f"[Aethor] Nightly whitelist sync ({ts})\n"
+                    f"Nightly whitelist sync ({ts})\n"
                     f"Added: {added} (local→server)\n"
-                    f"Removed: {removed}{' (extras pruned)' if AUTO_SYNC_REMOVE_EXTRAS else ''}"
+                    f"Removed: {removed}{' (extras pruned)' if CONFIG.auto_sync.remove_extras else ''}"
                 )
                 try:
                     await chan.send(msg)
@@ -292,11 +292,11 @@ class Management(commands.Cog):
         self._sync_last[ctx.author.id] = datetime.datetime.now()
         backup_whitelist()
 
-        if LOG_CHANNEL_ID:
-            chan = self.bot.get_channel(LOG_CHANNEL_ID)
+        if CONFIG.channels.log_channel_id:
+            chan = self.bot.get_channel(CONFIG.channels.log_channel_id)
             if isinstance(chan, discord.TextChannel):
                 ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
-                msg = f"[Aethor] Manual whitelist sync by {ctx.author.mention} ({ts})\n" + "\n".join(summary)
+                msg = f"Manual whitelist sync by {ctx.author.mention} ({ts})\n" + "\n".join(summary)
                 try:
                     await chan.send(msg)
                 except Exception:
@@ -350,11 +350,11 @@ class Management(commands.Cog):
         self._sync_last[interaction.user.id] = datetime.datetime.now()
         backup_whitelist()
 
-        if LOG_CHANNEL_ID:
-            chan = self.bot.get_channel(LOG_CHANNEL_ID)
+        if CONFIG.channels.log_channel_id:
+            chan = self.bot.get_channel(CONFIG.channels.log_channel_id)
             if isinstance(chan, discord.TextChannel):
                 ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
-                msg = f"[Aethor] Manual whitelist sync by {interaction.user.mention} ({ts})\n" + "\n".join(summary)
+                msg = f"Manual whitelist sync by {interaction.user.mention} ({ts})\n" + "\n".join(summary)
                 try:
                     await chan.send(msg)
                 except Exception:
@@ -493,12 +493,12 @@ class Management(commands.Cog):
         await interaction.followup.send("Import complete.\n" + "\n".join(summary), ephemeral=True)
         backup_whitelist()
 
-        if LOG_CHANNEL_ID:
-            chan = self.bot.get_channel(LOG_CHANNEL_ID)
+        if CONFIG.channels.log_channel_id:
+            chan = self.bot.get_channel(CONFIG.channels.log_channel_id)
             if isinstance(chan, discord.TextChannel):
                 try:
                     await chan.send(
-                        f"[Aethor] Whitelist import by {interaction.user.mention}: added {added}, already {already}."
+                        f"Whitelist import by {interaction.user.mention}: added {added}, already {already}."
                         + (f" RCON applied {rcon_applied}." if apply_rcon and rcon_applied else "")
                     )
                 except Exception:
@@ -524,10 +524,10 @@ class Management(commands.Cog):
 
     # Status commands
     def _next_sync_text(self) -> str:
-        if not AUTO_SYNC_ENABLED:
+        if not CONFIG.auto_sync.enabled:
             return "disabled"
         now = datetime.datetime.now()
-        target = now.replace(hour=AUTO_SYNC_HOUR, minute=AUTO_SYNC_MINUTE, second=0, microsecond=0)
+        target = now.replace(hour=CONFIG.auto_sync.hour, minute=CONFIG.auto_sync.minute, second=0, microsecond=0)
         if target <= now:
             target = target + datetime.timedelta(days=1)
         return target.strftime("%Y-%m-%d %H:%M")

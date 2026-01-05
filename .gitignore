@@ -2,3 +2,5 @@
 **.DS_Store
 .env
 logs/
+data/
+config.yaml
