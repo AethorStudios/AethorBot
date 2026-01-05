@@ -12,6 +12,8 @@ class General(commands.Cog):
         await ctx.reply(f"Pong! {round(self.bot.latency * 1000)}ms")
 
     @app_commands.command(name="ping", description="Check bot latency")
+    @app_commands.default_permissions(administrator=True)
+    @app_commands.checks.has_permissions(administrator=True)
     async def ping_slash(self, interaction: discord.Interaction):
         await interaction.response.send_message(f"Pong! {round(self.bot.latency * 1000)}ms")
 

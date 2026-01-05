@@ -5,6 +5,7 @@ import sys
 import time
 
 import discord
+from pretty_help import PrettyHelp
 from discord.ext import commands
 
 from src.config import (
@@ -53,7 +54,7 @@ class AethorBot(commands.Bot):
 def build_bot() -> commands.Bot:
     intents = discord.Intents.default()
     intents.message_content = True  # for prefix commands
-    bot = AethorBot(command_prefix="!", intents=intents, application_id=APPLICATION_ID)
+    bot = AethorBot(command_prefix="!", intents=intents, application_id=APPLICATION_ID, help_command=PrettyHelp())
     return bot
 
 
@@ -87,11 +88,11 @@ def main() -> None:
             try:
                 if GUILD_ID:
                     bot.tree.copy_global_to(guild=discord.Object(id=GUILD_ID))
-                    await bot.tree.sync(guild=discord.Object(id=GUILD_ID))
-                    logger.info(f"Synced slash commands to guild {GUILD_ID}")
+                    commands_synced = await bot.tree.sync(guild=discord.Object(id=GUILD_ID))
+                    logger.info(f"Synced {len(commands_synced)} slash commands to guild {GUILD_ID}")
                 else:
-                    await bot.tree.sync()
-                    logger.info("Synced global slash commands")
+                    commands_synced = await bot.tree.sync()
+                    logger.info(f"Synced {len(commands_synced)} global slash commands")
             except Exception as e:
                 logger.exception(f"Failed to sync commands: {e}")
 

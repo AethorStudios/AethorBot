@@ -64,6 +64,7 @@ class Management(commands.Cog):
     # Role management (slash)
     @app_commands.command(name="role_grant", description="Grant a role to a member")
     @app_commands.default_permissions(administrator=True)
+    @app_commands.checks.has_permissions(administrator=True)
     async def role_grant_slash(
         self, interaction: discord.Interaction, role: discord.Role, member: discord.Member | None = None
     ):
@@ -76,6 +77,7 @@ class Management(commands.Cog):
 
     @app_commands.command(name="role_revoke", description="Revoke a role from a member")
     @app_commands.default_permissions(administrator=True)
+    @app_commands.checks.has_permissions(administrator=True)
     async def role_revoke_slash(
         self, interaction: discord.Interaction, role: discord.Role, member: discord.Member | None = None
     ):
@@ -128,6 +130,7 @@ class Management(commands.Cog):
     # Whitelist management (slash)
     @app_commands.command(name="whitelist_add", description="Add a Minecraft name to whitelist")
     @app_commands.default_permissions(administrator=True)
+    @app_commands.checks.has_permissions(administrator=True)
     async def wl_add_slash(self, interaction: discord.Interaction, name: str):
         ok = add_to_whitelist(name)
         msg = f"Added `{name}` to whitelist." if ok else f"`{name}` already in whitelist or invalid."
@@ -141,6 +144,7 @@ class Management(commands.Cog):
 
     @app_commands.command(name="whitelist_remove", description="Remove a Minecraft name from whitelist")
     @app_commands.default_permissions(administrator=True)
+    @app_commands.checks.has_permissions(administrator=True)
     async def wl_remove_slash(self, interaction: discord.Interaction, name: str):
         ok = remove_from_whitelist(name)
         msg = f"Removed `{name}` from whitelist." if ok else f"`{name}` not found in whitelist."
@@ -154,6 +158,7 @@ class Management(commands.Cog):
 
     @app_commands.command(name="whitelist_list_server", description="List whitelisted names via RCON")
     @app_commands.default_permissions(administrator=True)
+    @app_commands.checks.has_permissions(administrator=True)
     async def wl_list_server_slash(self, interaction: discord.Interaction):
         if not rcon.is_enabled():
             await interaction.response.send_message("RCON not enabled.", ephemeral=True)

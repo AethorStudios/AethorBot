@@ -25,7 +25,7 @@ class Admin(commands.Cog):
         self.bot = bot
 
     @commands.command(name="reload")
-    @commands.is_owner()
+    @commands.has_permissions(administrator=True)
     async def reload_prefix(self, ctx: commands.Context, extension: str = ""):
         if not extension:
             for ext in list(self.bot.extensions.keys()):
@@ -43,6 +43,7 @@ class Admin(commands.Cog):
             await ctx.reply(f"Failed to reload `{extension}`: {e}")
 
     @commands.command(name="sync")
+    @commands.has_permissions(administrator=True)
     async def sync_prefix(self, ctx: commands.Context):
         if not user_is_admin(ctx):
             await ctx.reply("You lack permissions to sync commands.")
@@ -65,6 +66,7 @@ class Admin(commands.Cog):
 
     @app_commands.command(name="sync", description="Sync application commands")
     @app_commands.default_permissions(administrator=True)
+    @app_commands.checks.has_permissions(administrator=True)
     async def sync_slash(self, interaction: discord.Interaction):
         if not user_is_admin(interaction):
             await interaction.response.send_message("Insufficient permissions.", ephemeral=True)

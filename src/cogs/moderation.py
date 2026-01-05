@@ -15,6 +15,7 @@ class Moderation(commands.Cog):
     # Kick
     @app_commands.command(name="kick", description="Kick a member")
     @app_commands.default_permissions(kick_members=True)
+    @app_commands.checks.has_permissions(kick_members=True)
     async def kick_slash(self, interaction: discord.Interaction, member: discord.Member, reason: str | None = None):
         try:
             await member.kick(reason=reason or f"Kicked by {interaction.user}")
@@ -28,6 +29,7 @@ class Moderation(commands.Cog):
     # Ban
     @app_commands.command(name="ban", description="Ban a member")
     @app_commands.default_permissions(ban_members=True)
+    @app_commands.checks.has_permissions(ban_members=True)
     async def ban_slash(
         self,
         interaction: discord.Interaction,
@@ -50,6 +52,7 @@ class Moderation(commands.Cog):
 
     @app_commands.command(name="unban", description="Unban a user by ID")
     @app_commands.default_permissions(ban_members=True)
+    @app_commands.checks.has_permissions(ban_members=True)
     async def unban_slash(self, interaction: discord.Interaction, user_id: int, reason: str | None = None):
         try:
             user = await self.bot.fetch_user(user_id)
@@ -64,6 +67,7 @@ class Moderation(commands.Cog):
     # Timeout / Untimeout
     @app_commands.command(name="timeout", description="Timeout a member (minutes)")
     @app_commands.default_permissions(moderate_members=True)
+    @app_commands.checks.has_permissions(moderate_members=True)
     async def timeout_slash(
         self, interaction: discord.Interaction, member: discord.Member, minutes: int, reason: str | None = None
     ):
@@ -81,6 +85,7 @@ class Moderation(commands.Cog):
 
     @app_commands.command(name="untimeout", description="Remove timeout from a member")
     @app_commands.default_permissions(moderate_members=True)
+    @app_commands.checks.has_permissions(moderate_members=True)
     async def untimeout_slash(
         self, interaction: discord.Interaction, member: discord.Member, reason: str | None = None
     ):
@@ -98,6 +103,7 @@ class Moderation(commands.Cog):
     # Mute / Unmute via role (optional)
     @app_commands.command(name="mute", description="Mute by adding the MUTE_ROLE_ID role")
     @app_commands.default_permissions(moderate_members=True)
+    @app_commands.checks.has_permissions(moderate_members=True)
     async def mute_slash(self, interaction: discord.Interaction, member: discord.Member, reason: str | None = None):
         if not MUTE_ROLE_ID:
             await interaction.response.send_message("MUTE_ROLE_ID not set.", ephemeral=True)
@@ -117,6 +123,7 @@ class Moderation(commands.Cog):
 
     @app_commands.command(name="unmute", description="Unmute by removing the MUTE_ROLE_ID role")
     @app_commands.default_permissions(moderate_members=True)
+    @app_commands.checks.has_permissions(moderate_members=True)
     async def unmute_slash(self, interaction: discord.Interaction, member: discord.Member, reason: str | None = None):
         if not MUTE_ROLE_ID:
             await interaction.response.send_message("MUTE_ROLE_ID not set.", ephemeral=True)
@@ -149,6 +156,7 @@ class Moderation(commands.Cog):
 
     @app_commands.command(name="purge", description="Delete last N messages in this channel")
     @app_commands.default_permissions(manage_messages=True)
+    @app_commands.checks.has_permissions(manage_messages=True)
     async def purge_slash(self, interaction: discord.Interaction, count: int):
         try:
             channel = interaction.channel
@@ -166,6 +174,7 @@ class Moderation(commands.Cog):
     # Slowmode
     @app_commands.command(name="slowmode", description="Set slowmode seconds for a channel")
     @app_commands.default_permissions(manage_channels=True)
+    @app_commands.checks.has_permissions(manage_channels=True)
     async def slowmode_slash(
         self, interaction: discord.Interaction, seconds: int, channel: discord.TextChannel | None = None
     ):
@@ -185,6 +194,7 @@ class Moderation(commands.Cog):
     # Lock/Unlock
     @app_commands.command(name="lock", description="Lock a channel (deny @everyone sending)")
     @app_commands.default_permissions(manage_channels=True)
+    @app_commands.checks.has_permissions(manage_channels=True)
     async def lock_slash(self, interaction: discord.Interaction, channel: discord.TextChannel | None = None):
         ch = channel or interaction.channel
         if not isinstance(ch, discord.TextChannel):
@@ -201,6 +211,7 @@ class Moderation(commands.Cog):
 
     @app_commands.command(name="unlock", description="Unlock a channel (allow @everyone sending)")
     @app_commands.default_permissions(manage_channels=True)
+    @app_commands.checks.has_permissions(manage_channels=True)
     async def unlock_slash(self, interaction: discord.Interaction, channel: discord.TextChannel | None = None):
         ch = channel or interaction.channel
         if not isinstance(ch, discord.TextChannel):
