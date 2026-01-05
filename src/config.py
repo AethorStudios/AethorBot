@@ -1,12 +1,11 @@
 from __future__ import annotations
 
+from os import getenv
 from pathlib import Path
 from typing import Any, Optional
-from os import getenv
-
-from dotenv import load_dotenv
 
 import yaml
+from dotenv import load_dotenv
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, ValidationError, computed_field
 from pydantic.types import NonNegativeInt, PositiveInt  # noqa
 
