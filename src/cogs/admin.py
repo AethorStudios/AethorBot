@@ -168,7 +168,7 @@ class Admin(commands.Cog):
                 commands_synced = await self.bot.tree.sync()
                 await ctx.reply(f"Synced {len(commands_synced)} slash commands globally.", delete_after=10)
         except Exception as e:
-            await ctx.reply(f"Failed to sync commands: {e}")
+            await ctx.reply(f"Failed to sync commands: {e}", delete_after=10)
 
 
 async def setup(bot: commands.Bot):
