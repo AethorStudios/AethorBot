@@ -40,7 +40,7 @@ class Onboarding(commands.Cog):
 
         if CONFIG.roles.verified_role_id:
             try:
-                role = interaction.guild.get_role(CONFIG.roles.verified_role_id) if interaction.guild else None
+                role = CONFIG.roles.verified_role
                 if isinstance(role, discord.Role) and isinstance(interaction.user, discord.Member):
                     await interaction.user.add_roles(role, reason="Verification")
                     msg += f"Granted role {role.name}. "
@@ -48,12 +48,11 @@ class Onboarding(commands.Cog):
                 pass
 
         if CONFIG.channels.verify_log_channel_id:
-            chan = self.bot.get_channel(CONFIG.channels.verify_log_channel_id)
-            if isinstance(chan, discord.TextChannel):
-                try:
-                    await chan.send(f"Verified {interaction.user.mention} as {mc_name} (UUID {uuid}).")
-                except Exception:
-                    pass
+            channel = CONFIG.channels.verify_log_channel
+            try:
+                await channel.send(f"Verified {interaction.user.mention} as {mc_name} (UUID {uuid}).")
+            except Exception:
+                pass
 
         await interaction.followup.send(msg.strip(), ephemeral=True)
 
@@ -89,7 +88,7 @@ class Onboarding(commands.Cog):
         # Remove verified role
         role_msg = ""
         if CONFIG.roles.verified_role_id and isinstance(interaction.user, discord.Member):
-            role = interaction.guild.get_role(CONFIG.roles.verified_role_id) if interaction.guild else None
+            role = CONFIG.roles.verified_role
             if isinstance(role, discord.Role):
                 try:
                     await interaction.user.remove_roles(role, reason="Unverify")
@@ -102,12 +101,11 @@ class Onboarding(commands.Cog):
 
         # Log
         if CONFIG.channels.verify_log_channel_id:
-            chan = self.bot.get_channel(CONFIG.channels.verify_log_channel_id)
-            if isinstance(chan, discord.TextChannel):
-                try:
-                    await chan.send(f"Unverified {interaction.user.mention} (was {mc_name}).")
-                except Exception:
-                    pass
+            channel = CONFIG.channels.verify_log_channel
+            try:
+                await channel.send(f"Unverified {interaction.user.mention} (was {mc_name}).")
+            except Exception:
+                pass
 
         await interaction.followup.send((removed_msg + role_msg + "Unverified.").strip(), ephemeral=True)
 
@@ -137,8 +135,8 @@ class Onboarding(commands.Cog):
 
         if CONFIG.roles.verified_role_id:
             try:
-                role = interaction.guild.get_role(CONFIG.roles.verified_role_id) if interaction.guild else None
-                member = interaction.guild.get_member(user.id) if interaction.guild else None
+                role = CONFIG.roles.verified_role
+                member = interaction.guild.get_member(user.id)
                 if isinstance(role, discord.Role) and isinstance(member, discord.Member):
                     await member.add_roles(role, reason="Admin verification")
                     msg += f"Granted role {role.name}. "
@@ -146,14 +144,13 @@ class Onboarding(commands.Cog):
                 pass
 
         if CONFIG.channels.verify_log_channel_id:
-            chan = self.bot.get_channel(CONFIG.channels.verify_log_channel_id)
-            if isinstance(chan, discord.TextChannel):
-                try:
-                    await chan.send(
-                        f"Admin {interaction.user.mention} verified {user.mention} as {mc_name} (UUID {uuid})."
-                    )
-                except Exception:
-                    pass
+            channel = CONFIG.channels.verify_log_channel
+            try:
+                await channel.send(
+                    f"Admin {interaction.user.mention} verified {user.mention} as {mc_name} (UUID {uuid})."
+                )
+            except Exception:
+                pass
 
         await interaction.followup.send(msg.strip(), ephemeral=True)
 
@@ -185,8 +182,8 @@ class Onboarding(commands.Cog):
 
         role_msg = ""
         if CONFIG.roles.verified_role_id:
-            member = interaction.guild.get_member(user.id) if interaction.guild else None
-            role = interaction.guild.get_role(CONFIG.roles.verified_role_id) if interaction.guild else None
+            member = interaction.guild.get_member(user.id)
+            role = CONFIG.roles.verified_role
             if isinstance(member, discord.Member) and isinstance(role, discord.Role):
                 try:
                     await member.remove_roles(role, reason="Admin unverify")
@@ -198,14 +195,13 @@ class Onboarding(commands.Cog):
             delete_player(user.id)
 
         if CONFIG.channels.verify_log_channel_id:
-            chan = self.bot.get_channel(CONFIG.channels.verify_log_channel_id)
-            if isinstance(chan, discord.TextChannel):
-                try:
-                    await chan.send(
-                        f"Admin {interaction.user.mention} unverifed {user.mention} (was {mc_name or 'unknown'})."
-                    )
-                except Exception:
-                    pass
+            channel = CONFIG.channels.verify_log_channel
+            try:
+                await channel.send(
+                    f"Admin {interaction.user.mention} unverifed {user.mention} (was {mc_name or 'unknown'})."
+                )
+            except Exception:
+                pass
 
         await interaction.followup.send((removed_msg + role_msg + "User unverified.").strip(), ephemeral=True)
 
