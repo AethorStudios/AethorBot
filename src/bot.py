@@ -8,7 +8,8 @@ import discord
 from discord.ext import commands
 from pretty_help import PrettyHelp
 
-from src.config import ConfigModel, load_config
+from src.config import ConfigModel, load_config, resolve_config_values
+from src.utils.args import RuntimeArgs, get_runtime_args
 from src.utils.health import make_status_func, start_health_server
 from src.utils.logger import setup_logging
 
@@ -33,12 +34,14 @@ async def load_cogs(bot: commands.Bot) -> None:
 
 
 class AethorBot(commands.Bot):
-    def __init__(self, *, config: ConfigModel, **kwargs):
+    def __init__(self, *, config: ConfigModel, args: RuntimeArgs, **kwargs):
         super().__init__(**kwargs)
         self.config = config
+        self.runtime_args = args
 
     async def setup_hook(self) -> None:
         await load_cogs(self)
+
         # Start healthcheck server after cogs load
         if self.config.healthcheck.enabled:
             started_at = getattr(self, "_started_at", time.time())
@@ -50,11 +53,12 @@ class AethorBot(commands.Bot):
                 logging.getLogger("Aethor").warning(f"Failed to start healthcheck server: {e}")
 
 
-def build_bot(config: ConfigModel) -> commands.Bot:
+def build_bot(config: ConfigModel, args: RuntimeArgs) -> commands.Bot:
     intents = discord.Intents.default()
     intents.message_content = True  # for prefix commands
     bot = AethorBot(
         config=config,
+        args=args,
         command_prefix="!",
         intents=intents,
         application_id=config.discord.application_id,
@@ -64,10 +68,7 @@ def build_bot(config: ConfigModel) -> commands.Bot:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Aethor Discord Bot")
-    parser.add_argument("--check", action="store_true", help="Validate setup and cogs, then exit.")
-    parser.add_argument("--sync", action="store_true", help="Sync slash commands on ready.")
-    args = parser.parse_args()
+    args = get_runtime_args()
 
     if not args.check:
         config.validate_required_runtime()
@@ -75,7 +76,7 @@ def main() -> None:
     setup_logging(config)
     logger = logging.getLogger("Aethor")
 
-    bot = build_bot(config)
+    bot = build_bot(config, args)
 
     if args.check:
         # Load extensions in an async context to validate without running the bot
@@ -90,6 +91,7 @@ def main() -> None:
     @bot.event
     async def on_ready():
         logger.info(f"Logged in as {bot.user} (ID: {bot.user.id})")
+        resolve_config_values(bot)
         if args.sync:
             try:
                 if config.discord.guild_id:

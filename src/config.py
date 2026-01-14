@@ -2,17 +2,24 @@ from __future__ import annotations
 
 from os import getenv
 from pathlib import Path
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any
 
 import yaml
 from dotenv import load_dotenv
-from pydantic import BaseModel, ConfigDict, Field, SecretStr, ValidationError, computed_field
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, ValidationError
 from pydantic.types import NonNegativeInt, PositiveInt  # noqa
+
+if TYPE_CHECKING:
+    import discord
+
+    from src.bot import AethorBot
 
 load_dotenv()
 CONFIG: ConfigModel | None = None
+BOT: AethorBot | None = None
 
-# Models
+
+# ============== CONFIG MODELS ==============
 
 
 class DiscordConfig(BaseModel):
@@ -20,17 +27,64 @@ class DiscordConfig(BaseModel):
     guild_id: NonNegativeInt = 0
     application_id: NonNegativeInt = 0
 
+    @property
+    def guild(self) -> discord.Guild | None:
+        if BOT:
+            return BOT.get_guild(int(self.guild_id))
+        return None
+
 
 class RolesConfig(BaseModel):
     verified_role_id: NonNegativeInt = 0
     mute_role_id: NonNegativeInt = 0
     admin_role_ids: list[NonNegativeInt] = Field(default_factory=list)
 
+    @property
+    def verified_role(self) -> discord.Role | None:
+        if BOT and self.verified_role_id != 0 and BOT.config.discord.guild:
+            return BOT.config.discord.guild.get_role(int(self.verified_role_id))
+        return None
+
+    @property
+    def mute_role(self) -> discord.Role | None:
+        if BOT and self.mute_role_id != 0 and BOT.config.discord.guild:
+            return BOT.config.discord.guild.get_role(int(self.mute_role_id))
+        return None
+
+    @property
+    def admin_roles(self) -> list[discord.Role]:
+        roles: list[discord.Role] = []
+        if BOT and BOT.config.discord.guild:
+            guild = BOT.config.discord.guild
+            for role_id in self.admin_role_ids:
+                role = guild.get_role(int(role_id))
+                if role:
+                    roles.append(role)
+        return roles
+
 
 class ChannelsConfig(BaseModel):
     log_channel_id: NonNegativeInt = 0
     mod_log_channel_id: NonNegativeInt = 0
     verify_log_channel_id: NonNegativeInt = 0
+
+    @property
+    def log_channel(self) -> discord.TextChannel | None:
+        if BOT and self.log_channel_id != 0:
+            return BOT.get_channel(int(self.log_channel_id))
+        return None
+
+    @property
+    def mod_log_channel(self) -> discord.TextChannel | None:
+        if BOT and self.mod_log_channel_id != 0:
+            return BOT.get_channel(int(self.mod_log_channel_id))
+        return None
+
+    @property
+    def verify_log_channel(self) -> discord.TextChannel | None:
+        if BOT and self.verify_log_channel_id != 0:
+            return BOT.get_channel(int(self.verify_log_channel_id))
+        return None
 
 
 class AutoSyncConfig(BaseModel):
@@ -119,9 +173,7 @@ class ConfigModel(BaseModel):
             raise RuntimeError(f"Missing required config IDs (still 0): {', '.join(missing)}")
 
 
-# -----------------------------
-# Loader / saver (CDL-style)
-# -----------------------------
+# ============== CONFIG FUNCTIONS ==============
 
 
 class InvalidYamlError(RuntimeError):
@@ -216,6 +268,11 @@ def load_config(path: str | Path, *, update_if_has_string: str = "") -> ConfigMo
     config.validate_required_runtime()
     set_global_config(config)
     return config
+
+
+def resolve_config_values(bot: AethorBot) -> None:
+    global BOT
+    BOT = bot
 
 
 def get_config() -> ConfigModel:
