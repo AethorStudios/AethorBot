@@ -1,4 +1,3 @@
-import argparse
 import asyncio
 import logging
 import sys
@@ -13,7 +12,8 @@ from src.utils.args import RuntimeArgs, get_runtime_args
 from src.utils.health import make_status_func, start_health_server
 from src.utils.logger import setup_logging
 
-config = load_config("./config.yaml", update_if_has_string="token: CHANGE_ME")
+args: RuntimeArgs = None
+config: ConfigModel = None
 
 
 async def load_cogs(bot: commands.Bot) -> None:
@@ -68,7 +68,9 @@ def build_bot(config: ConfigModel, args: RuntimeArgs) -> commands.Bot:
 
 
 def main() -> None:
+    global args, config
     args = get_runtime_args()
+    config = load_config(args.config_path, update_if_has_string="token: CHANGE_ME")
 
     if not args.check:
         config.validate_required_runtime()
