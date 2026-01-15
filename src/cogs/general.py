@@ -15,7 +15,7 @@ class General(commands.Cog):
 
     @app_commands.command(name="about", description="About Aethor bot")
     async def about(self, interaction: discord.Interaction):
-        await interaction.response.send_message("Aethor Bot — Minecraft MMORPG companion.")
+        await interaction.response.send_message("Aethor Bot — Minecraft MMORPG companion.", ephemeral=True)
 
 
 async def setup(bot: commands.Bot):

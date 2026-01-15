@@ -157,6 +157,7 @@ class Management(commands.Cog):
 
     @app_commands.command(name="whitelist_list", description="List whitelisted Minecraft names")
     @app_commands.default_permissions(administrator=True)
+    @app_commands.checks.has_permissions(administrator=True)
     async def whitelist_list(self, interaction: discord.Interaction):
         whitelist = read_whitelist()
         if not whitelist:
@@ -167,6 +168,7 @@ class Management(commands.Cog):
 
     @app_commands.command(name="whitelist_sync", description="Sync local whitelist to server via RCON")
     @app_commands.default_permissions(administrator=True)
+    @app_commands.checks.has_permissions(administrator=True)
     async def whitelist_sync(self, interaction: discord.Interaction, remove_extras: bool = False):
         sync_cooldown = self._cooldown_remaining(interaction.user.id)
         if sync_cooldown > 0:
@@ -227,6 +229,7 @@ class Management(commands.Cog):
 
     @app_commands.command(name="whitelist_diff", description="Preview local vs server whitelist changes")
     @app_commands.default_permissions(administrator=True)
+    @app_commands.checks.has_permissions(administrator=True)
     async def whitelist_diff(self, interaction: discord.Interaction):
         if not rcon.is_enabled():
             await interaction.response.send_message("RCON not enabled.", ephemeral=True)
@@ -249,6 +252,7 @@ class Management(commands.Cog):
         name="whitelist_import", description="Import IGNs from a CSV/TXT attachment; optionally apply via RCON"
     )
     @app_commands.default_permissions(administrator=True)
+    @app_commands.checks.has_permissions(administrator=True)
     async def whitelist_import(
         self, interaction: discord.Interaction, file: discord.Attachment, apply_rcon: bool = False
     ):
@@ -314,6 +318,7 @@ class Management(commands.Cog):
 
     @app_commands.command(name="whitelist_export", description="Export whitelist as JSON or CSV file")
     @app_commands.default_permissions(administrator=True)
+    @app_commands.checks.has_permissions(administrator=True)
     async def whitelist_export(self, interaction: discord.Interaction, as_csv: bool = False):
         await interaction.response.defer(ephemeral=True)
         names = read_whitelist()
@@ -331,6 +336,8 @@ class Management(commands.Cog):
             await interaction.followup.send(f"Failed to send file: {e}", ephemeral=True)
 
     @app_commands.command(name="status", description="Show bot status (RCON, sync time, whitelist counts)")
+    @app_commands.default_permissions(administrator=True)
+    @app_commands.checks.has_permissions(administrator=True)
     async def status(self, interaction: discord.Interaction):
         local_count = len(read_whitelist())
         server_count = "N/A"
