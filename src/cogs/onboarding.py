@@ -5,7 +5,7 @@ from discord.ext import commands
 from src.config import ConfigModel, get_config
 from src.utils import rcon
 from src.utils.mc_online import is_player_online
-from src.utils.mojang import fetch_uuid
+from src.utils.mojang import fetch_player_by_username
 from src.utils.players import delete_player, get_player, set_player
 from src.utils.store import add_to_whitelist, remove_from_whitelist
 
@@ -20,20 +20,19 @@ class Onboarding(commands.Cog):
     @app_commands.describe(name="Your Minecraft in-game name")
     async def verify_self(self, interaction: discord.Interaction, name: str):
         await interaction.response.defer(ephemeral=True)
-        uuid, exact = await fetch_uuid(name)
-        if not uuid:
+        user = await fetch_player_by_username(name)
+        if not user:
             await interaction.followup.send("Could not find that Minecraft name. Check spelling.", ephemeral=True)
             return
-        mc_name = exact or name
-        set_player(interaction.user.id, mc_name, uuid)
+        set_player(interaction.user.id, user.username, user.uuid)
 
-        added = add_to_whitelist(mc_name)
-        msg = f"Linked {mc_name} (UUID: {uuid}). "
+        added = add_to_whitelist(user.username)
+        msg = f"Linked {user.username} (UUID: {user.uuid}). "
         msg += "Added to whitelist. " if added else "Already on whitelist. "
 
         if rcon.is_enabled() and added:
             try:
-                r = rcon.whitelist_add(mc_name)
+                r = rcon.whitelist_add(user.username)
                 msg += f"RCON: {r} "
             except Exception as e:
                 msg += f"RCON failed: {e} "
@@ -50,7 +49,7 @@ class Onboarding(commands.Cog):
         if CONFIG.channels.verify_log_channel_id:
             channel = CONFIG.channels.verify_log_channel
             try:
-                await channel.send(f"Verified {interaction.user.mention} as {mc_name} (UUID {uuid}).")
+                await channel.send(f"Verified {interaction.user.mention} as {user.username} (UUID {user.uuid}).")
             except Exception:
                 pass
 
@@ -115,20 +114,19 @@ class Onboarding(commands.Cog):
     @app_commands.checks.has_permissions(administrator=True)
     async def verify_other_user(self, interaction: discord.Interaction, user: discord.User, name: str):
         await interaction.response.defer(ephemeral=True)
-        uuid, exact = await fetch_uuid(name)
-        if not uuid:
+        mc_user = await fetch_player_by_username(name)
+        if not user:
             await interaction.followup.send("Could not find that Minecraft name. Check spelling.", ephemeral=True)
             return
-        mc_name = exact or name
-        set_player(user.id, mc_name, uuid)
+        set_player(user.id, mc_user.username, mc_user.uuid)
 
-        added = add_to_whitelist(mc_name)
-        msg = f"Linked {mc_name} (UUID: {uuid}) to {user.mention}. "
+        added = add_to_whitelist(mc_user.username)
+        msg = f"Linked {mc_user.username} (UUID: {mc_user.uuid}) to {user.mention}. "
         msg += "Added to whitelist. " if added else "Already on whitelist. "
 
         if rcon.is_enabled() and added:
             try:
-                r = rcon.whitelist_add(mc_name)
+                r = rcon.whitelist_add(mc_user.username)
                 msg += f"RCON: {r} "
             except Exception as e:
                 msg += f"RCON failed: {e} "
@@ -147,7 +145,7 @@ class Onboarding(commands.Cog):
             channel = CONFIG.channels.verify_log_channel
             try:
                 await channel.send(
-                    f"Admin {interaction.user.mention} verified {user.mention} as {mc_name} (UUID {uuid})."
+                    f"Admin {interaction.user.mention} verified {user.mention} as {mc_user.username} (UUID {mc_user.uuid})."
                 )
             except Exception:
                 pass
