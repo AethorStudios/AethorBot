@@ -5,7 +5,6 @@ from discord import app_commands
 from discord.ext import commands
 
 from src.config import ConfigModel, get_config
-from src.utils.levenshtein import levenshtein_distance
 
 CONFIG: ConfigModel = get_config()
 
@@ -32,11 +31,11 @@ class Admin(commands.Cog):
         extensions = ["ALL"] if not current or "ALL".startswith(current.upper()) else []
 
         if loaded is True:
-            extensions += sorted(self.get_loaded_extensions(), key=lambda ext: levenshtein_distance(current, ext))
+            extensions += sorted(self.get_loaded_extensions())
         elif loaded is False:
-            extensions += sorted(self.get_unloaded_extensions(), key=lambda ext: levenshtein_distance(current, ext))
+            extensions += sorted(self.get_unloaded_extensions())
         else:
-            extensions += sorted(self.get_all_extensions(), key=lambda ext: levenshtein_distance(current, ext))
+            extensions += sorted(self.get_all_extensions())
 
         if interaction.command.name == "cog_unload" and "admin" in extensions:
             extensions.remove("admin")  # Prevent unloading self
