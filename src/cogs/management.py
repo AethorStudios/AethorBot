@@ -5,7 +5,7 @@ import json
 import re
 
 import discord
-from discord import app_commands
+from discord import Permissions, app_commands
 from discord.ext import commands, tasks
 
 from src.config import ConfigModel, get_config
@@ -80,9 +80,11 @@ class Management(commands.Cog):
 
     # ============== COMMANDS ==============
 
-    # Role management (slash)
-    @app_commands.command(name="role_grant", description="Grant a role to a member")
-    @app_commands.default_permissions(administrator=True)
+    # Role Management
+    role_management = app_commands.Group(name="role", description="Role management commands")
+    role_management.default_permissions = Permissions(administrator=True)
+
+    @role_management.command(name="grant", description="Grant a role to a member")
     @app_commands.checks.has_permissions(administrator=True)
     async def role_grant(
         self, interaction: discord.Interaction, role: discord.Role, member: discord.Member | None = None
@@ -94,8 +96,7 @@ class Management(commands.Cog):
         except Exception as e:
             await interaction.response.send_message(f"Failed to grant role: {e}", ephemeral=True)
 
-    @app_commands.command(name="role_revoke", description="Revoke a role from a member")
-    @app_commands.default_permissions(administrator=True)
+    @role_management.command(name="revoke", description="Revoke a role from a member")
     @app_commands.checks.has_permissions(administrator=True)
     async def role_revoke(
         self, interaction: discord.Interaction, role: discord.Role, member: discord.Member | None = None
@@ -109,9 +110,12 @@ class Management(commands.Cog):
         except Exception as e:
             await interaction.response.send_message(f"Failed to revoke role: {e}", ephemeral=True)
 
+    # Whitelist management
+    whitelist_management = app_commands.Group(name="whitelist", description="Minecraft whitelist management commands")
+    whitelist_management.default_permissions = Permissions(administrator=True)
+
     # Whitelist management (slash)
-    @app_commands.command(name="whitelist_add", description="Add a Minecraft name to whitelist")
-    @app_commands.default_permissions(administrator=True)
+    @whitelist_management.command(name="add", description="Add a Minecraft name to whitelist")
     @app_commands.checks.has_permissions(administrator=True)
     async def whitelist_add(self, interaction: discord.Interaction, name: str):
         ok = add_to_whitelist(name)
@@ -124,8 +128,7 @@ class Management(commands.Cog):
                 msg += f"\nRCON failed: {e}"
         await interaction.response.send_message(msg, ephemeral=True)
 
-    @app_commands.command(name="whitelist_remove", description="Remove a Minecraft name from whitelist")
-    @app_commands.default_permissions(administrator=True)
+    @whitelist_management.command(name="remove", description="Remove a Minecraft name from whitelist")
     @app_commands.checks.has_permissions(administrator=True)
     async def whitelist_remove(self, interaction: discord.Interaction, name: str):
         ok = remove_from_whitelist(name)
@@ -138,36 +141,31 @@ class Management(commands.Cog):
                 msg += f"\nRCON failed: {e}"
         await interaction.response.send_message(msg, ephemeral=True)
 
-    @app_commands.command(name="whitelist_list_server", description="List whitelisted names via RCON")
-    @app_commands.default_permissions(administrator=True)
+    @whitelist_management.command(name="list", description="List whitelisted Minecraft names")
     @app_commands.checks.has_permissions(administrator=True)
-    async def whitelist_list_server(self, interaction: discord.Interaction):
-        if not rcon.is_enabled():
-            await interaction.response.send_message("RCON not enabled.", ephemeral=True)
-            return
-        try:
-            names = rcon.whitelist_list()
-            if not names:
-                await interaction.response.send_message("Server whitelist is empty.", ephemeral=True)
+    async def whitelist_list(self, interaction: discord.Interaction, server: bool = False):
+        if not server:
+            whitelist = read_whitelist()
+            if not whitelist:
+                await interaction.response.send_message("Whitelist is empty.", ephemeral=True)
                 return
-            content = "\n".join(names[:100])
-            await interaction.response.send_message(f"Server whitelist ({len(names)}):\n{content}", ephemeral=True)
-        except Exception as e:
-            await interaction.response.send_message(f"RCON failed: {e}", ephemeral=True)
+            content = "\n".join(whitelist[:100])
+            await interaction.response.send_message(f"Whitelist ({len(whitelist)}):\n{content}", ephemeral=True)
+        else:
+            if not rcon.is_enabled():
+                await interaction.response.send_message("RCON not enabled.", ephemeral=True)
+                return
+            try:
+                names = rcon.whitelist_list()
+                if not names:
+                    await interaction.response.send_message("Server whitelist is empty.", ephemeral=True)
+                    return
+                content = "\n".join(names[:100])
+                await interaction.response.send_message(f"Server whitelist ({len(names)}):\n{content}", ephemeral=True)
+            except Exception as e:
+                await interaction.response.send_message(f"RCON failed: {e}", ephemeral=True)
 
-    @app_commands.command(name="whitelist_list", description="List whitelisted Minecraft names")
-    @app_commands.default_permissions(administrator=True)
-    @app_commands.checks.has_permissions(administrator=True)
-    async def whitelist_list(self, interaction: discord.Interaction):
-        whitelist = read_whitelist()
-        if not whitelist:
-            await interaction.response.send_message("Whitelist is empty.", ephemeral=True)
-            return
-        content = "\n".join(whitelist[:100])
-        await interaction.response.send_message(f"Whitelist ({len(whitelist)}):\n{content}", ephemeral=True)
-
-    @app_commands.command(name="whitelist_sync", description="Sync local whitelist to server via RCON")
-    @app_commands.default_permissions(administrator=True)
+    @whitelist_management.command(name="sync", description="Sync local whitelist to server via RCON")
     @app_commands.checks.has_permissions(administrator=True)
     async def whitelist_sync(self, interaction: discord.Interaction, remove_extras: bool = False):
         sync_cooldown = self._cooldown_remaining(interaction.user.id)
@@ -227,8 +225,7 @@ class Management(commands.Cog):
                 except Exception:
                     pass
 
-    @app_commands.command(name="whitelist_diff", description="Preview local vs server whitelist changes")
-    @app_commands.default_permissions(administrator=True)
+    @whitelist_management.command(name="diff", description="Preview local vs server whitelist changes")
     @app_commands.checks.has_permissions(administrator=True)
     async def whitelist_diff(self, interaction: discord.Interaction):
         if not rcon.is_enabled():
@@ -248,10 +245,9 @@ class Management(commands.Cog):
         ]
         await interaction.response.send_message("Diff preview:\n" + "\n".join(lines), ephemeral=True)
 
-    @app_commands.command(
-        name="whitelist_import", description="Import IGNs from a CSV/TXT attachment; optionally apply via RCON"
+    @whitelist_management.command(
+        name="import", description="Import IGNs from a CSV/TXT attachment; optionally apply via RCON"
     )
-    @app_commands.default_permissions(administrator=True)
     @app_commands.checks.has_permissions(administrator=True)
     async def whitelist_import(
         self, interaction: discord.Interaction, file: discord.Attachment, apply_rcon: bool = False
@@ -316,8 +312,7 @@ class Management(commands.Cog):
                 except Exception:
                     pass
 
-    @app_commands.command(name="whitelist_export", description="Export whitelist as JSON or CSV file")
-    @app_commands.default_permissions(administrator=True)
+    @whitelist_management.command(name="export", description="Export whitelist as JSON or CSV file")
     @app_commands.checks.has_permissions(administrator=True)
     async def whitelist_export(self, interaction: discord.Interaction, as_csv: bool = False):
         await interaction.response.defer(ephemeral=True)

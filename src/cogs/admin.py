@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import discord
-from discord import app_commands
+from discord import Permissions, app_commands
 from discord.ext import commands
 
 from src.config import ConfigModel, get_config
@@ -25,7 +25,7 @@ class Admin(commands.Cog):
         return self.get_all_extensions() - self.get_loaded_extensions()
 
     async def autocomplete_cogs(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
-        loaded: bool | None = {"cog_reload": True, "cog_unload": True, "cog_load": False}.get(
+        loaded: bool | None = {"reload": True, "unload": True, "load": False}.get(
             interaction.command.name, None
         )  # Select what to show based on command
         extensions = ["ALL"] if not current or "ALL".startswith(current.upper()) else []
@@ -37,7 +37,7 @@ class Admin(commands.Cog):
         else:
             extensions += sorted(self.get_all_extensions())
 
-        if interaction.command.name == "cog_unload" and "admin" in extensions:
+        if interaction.command.name == "unload" and "admin" in extensions:
             extensions.remove("admin")  # Prevent unloading self
 
         choices = [app_commands.Choice(name=ext, value=ext) for ext in extensions if current.lower() in ext.lower()]
@@ -45,9 +45,12 @@ class Admin(commands.Cog):
 
     # ============== COMMANDS ==============
 
-    @app_commands.command(name="cog_load", description="Load bot cogs")
+    # Cog Management
+    extension_management = app_commands.Group(name="cog", description="Cog management commands")
+    extension_management.default_permissions = Permissions(administrator=True)
+
+    @extension_management.command(name="load", description="Load bot cogs")
     @app_commands.describe(extension="The cog to load")
-    @app_commands.default_permissions(administrator=True)
     @app_commands.checks.has_permissions(administrator=True)
     @app_commands.autocomplete(extension=autocomplete_cogs)
     async def load_extension(self, interaction: discord.Interaction, extension: str):
@@ -73,9 +76,8 @@ class Admin(commands.Cog):
             except Exception as e:
                 await interaction.response.send_message(f"Failed to load `{extension}`: {e}", ephemeral=True)
 
-    @app_commands.command(name="cog_unload", description="Unload bot cog")
+    @extension_management.command(name="unload", description="Unload bot cog")
     @app_commands.describe(extension="The cog to unload")
-    @app_commands.default_permissions(administrator=True)
     @app_commands.checks.has_permissions(administrator=True)
     @app_commands.autocomplete(extension=autocomplete_cogs)
     async def unload_extension(self, interaction: discord.Interaction, extension: str):
@@ -107,9 +109,8 @@ class Admin(commands.Cog):
             except Exception as e:
                 await interaction.response.send_message(f"Failed to unload `{extension}`: {e}", ephemeral=True)
 
-    @app_commands.command(name="cog_reload", description="Reload bot cogs")
+    @extension_management.command(name="reload", description="Reload bot cogs")
     @app_commands.describe(extension="The cog to reload")
-    @app_commands.default_permissions(administrator=True)
     @app_commands.checks.has_permissions(administrator=True)
     @app_commands.autocomplete(extension=autocomplete_cogs)
     async def reload_extension(self, interaction: discord.Interaction, extension: str):

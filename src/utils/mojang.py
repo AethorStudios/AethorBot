@@ -3,8 +3,9 @@ from base64 import b64decode
 from uuid import UUID
 
 import aiohttp
-from src.utils.models import MinecraftUser
 from yarl import URL
+
+from src.utils.models import MinecraftUser
 
 MINECRAFT_API_URL = URL("https://api.minecraftservices.com/")
 

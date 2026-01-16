@@ -1,7 +1,7 @@
 import datetime
 
 import discord
-from discord import app_commands
+from discord import Permissions, app_commands
 from discord.ext import commands
 
 from src.config import ConfigModel, get_config
@@ -14,8 +14,14 @@ class Moderation(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
+    # Member moderation
+    member_moderation = app_commands.Group(name="moderation", description="Member moderation commands")
+    member_moderation.default_permissions = Permissions(
+        kick_members=True, ban_members=True, moderate_members=True, manage_messages=True
+    )
+
     # Kick
-    @app_commands.command(name="kick", description="Kick a member")
+    @member_moderation.command(name="kick", description="Kick a member")
     @app_commands.default_permissions(kick_members=True)
     @app_commands.checks.has_permissions(kick_members=True)
     async def kick(self, interaction: discord.Interaction, member: discord.Member, reason: str | None = None):
@@ -27,7 +33,7 @@ class Moderation(commands.Cog):
             await interaction.response.send_message(f"Failed to kick: {e}", ephemeral=True)
 
     # Ban
-    @app_commands.command(name="ban", description="Ban a member")
+    @member_moderation.command(name="ban", description="Ban a member")
     @app_commands.default_permissions(ban_members=True)
     @app_commands.checks.has_permissions(ban_members=True)
     async def ban(
@@ -49,12 +55,12 @@ class Moderation(commands.Cog):
         except Exception as e:
             await interaction.response.send_message(f"Failed to ban: {e}", ephemeral=True)
 
-    @app_commands.command(name="unban", description="Unban a user by ID")
+    @member_moderation.command(name="unban", description="Unban a user by ID")
     @app_commands.default_permissions(ban_members=True)
     @app_commands.checks.has_permissions(ban_members=True)
-    async def unban(self, interaction: discord.Interaction, user_id: int, reason: str | None = None):
+    async def unban(self, interaction: discord.Interaction, user: discord.Member, reason: str | None = None):
         try:
-            user = await self.bot.fetch_user(user_id)
+            user = await self.bot.fetch_user(user)
             await interaction.guild.unban(user, reason=reason or f"Unbanned by {interaction.user}")
             await interaction.response.send_message(f"Unbanned {user.mention}.", ephemeral=True)
             await send_mod_log(
@@ -64,7 +70,7 @@ class Moderation(commands.Cog):
             await interaction.response.send_message(f"Failed to unban: {e}", ephemeral=True)
 
     # Timeout / Untimeout
-    @app_commands.command(name="timeout", description="Timeout a member (minutes)")
+    @member_moderation.command(name="timeout", description="Timeout a member (minutes)")
     @app_commands.default_permissions(moderate_members=True)
     @app_commands.checks.has_permissions(moderate_members=True)
     async def timeout(
@@ -81,7 +87,7 @@ class Moderation(commands.Cog):
         except Exception as e:
             await interaction.response.send_message(f"Failed to timeout: {e}", ephemeral=True)
 
-    @app_commands.command(name="untimeout", description="Remove timeout from a member")
+    @member_moderation.command(name="untimeout", description="Remove timeout from a member")
     @app_commands.default_permissions(moderate_members=True)
     @app_commands.checks.has_permissions(moderate_members=True)
     async def untimeout(self, interaction: discord.Interaction, member: discord.Member, reason: str | None = None):
@@ -95,40 +101,7 @@ class Moderation(commands.Cog):
         except Exception as e:
             await interaction.response.send_message(f"Failed to untimeout: {e}", ephemeral=True)
 
-    # Mute / Unmute via role (optional)
-    @app_commands.command(name="mute", description="Mute a user by adding the muted role")
-    @app_commands.default_permissions(moderate_members=True)
-    @app_commands.checks.has_permissions(moderate_members=True)
-    async def mute(self, interaction: discord.Interaction, member: discord.Member, reason: str | None = None):
-        mute_role = CONFIG.roles.mute_role
-        if not isinstance(mute_role, discord.Role):
-            await interaction.response.send_message("Mute role not found.", ephemeral=True)
-            return
-        try:
-            await member.add_roles(mute_role, reason=reason or f"Mute by {interaction.user}")
-            await interaction.response.send_message(f"Muted {member.mention}.", ephemeral=True)
-            await send_mod_log("Mute", f"{interaction.user.mention} muted {member.mention}\nReason: {reason or 'n/a'}")
-        except Exception as e:
-            await interaction.response.send_message(f"Failed to mute: {e}", ephemeral=True)
-
-    @app_commands.command(name="unmute", description="Unmute a user by removing the muted role")
-    @app_commands.default_permissions(moderate_members=True)
-    @app_commands.checks.has_permissions(moderate_members=True)
-    async def unmute(self, interaction: discord.Interaction, member: discord.Member, reason: str | None = None):
-        mute_role = CONFIG.roles.mute_role
-        if not isinstance(mute_role, discord.Role):
-            await interaction.response.send_message("Mute role not found.", ephemeral=True)
-            return
-        try:
-            await member.remove_roles(mute_role, reason=reason or f"Unmute by {interaction.user}")
-            await interaction.response.send_message(f"Unmuted {member.mention}.", ephemeral=True)
-            await send_mod_log(
-                "Unmute", f"{interaction.user.mention} unmuted {member.mention}\nReason: {reason or 'n/a'}"
-            )
-        except Exception as e:
-            await interaction.response.send_message(f"Failed to unmute: {e}", ephemeral=True)
-
-    @app_commands.command(name="purge", description="Delete last N messages in this channel")
+    @member_moderation.command(name="purge", description="Delete last N messages in this channel")
     @app_commands.default_permissions(manage_messages=True)
     @app_commands.checks.has_permissions(manage_messages=True)
     async def purge(self, interaction: discord.Interaction, count: int):
@@ -145,9 +118,12 @@ class Moderation(commands.Cog):
         except Exception as e:
             await interaction.response.send_message(f"Failed to purge: {e}", ephemeral=True)
 
+    # Channel moderation
+    channel_moderation = app_commands.Group(name="channel", description="Channel moderation commands")
+    channel_moderation.default_permissions = Permissions(manage_channels=True)
+
     # Slowmode
-    @app_commands.command(name="slowmode", description="Set slowmode seconds for a channel")
-    @app_commands.default_permissions(manage_channels=True)
+    @channel_moderation.command(name="slowmode", description="Set slowmode seconds for a channel")
     @app_commands.checks.has_permissions(manage_channels=True)
     async def slowmode(
         self, interaction: discord.Interaction, seconds: int, target_channel: discord.TextChannel | None = None
@@ -166,8 +142,7 @@ class Moderation(commands.Cog):
             await interaction.response.send_message(f"Failed to set slowmode: {e}", ephemeral=True)
 
     # Lock/Unlock
-    @app_commands.command(name="lock", description="Lock a channel (deny @everyone sending)")
-    @app_commands.default_permissions(manage_channels=True)
+    @channel_moderation.command(name="lock", description="Lock a channel (deny @everyone sending)")
     @app_commands.checks.has_permissions(manage_channels=True)
     async def lock(self, interaction: discord.Interaction, target_channel: discord.TextChannel | None = None):
         channel = target_channel or interaction.channel
@@ -183,8 +158,7 @@ class Moderation(commands.Cog):
         except Exception as e:
             await interaction.response.send_message(f"Failed to lock: {e}", ephemeral=True)
 
-    @app_commands.command(name="unlock", description="Unlock a channel (allow @everyone sending)")
-    @app_commands.default_permissions(manage_channels=True)
+    @channel_moderation.command(name="unlock", description="Unlock a channel (allow @everyone sending)")
     @app_commands.checks.has_permissions(manage_channels=True)
     async def unlock(self, interaction: discord.Interaction, target_channel: discord.TextChannel | None = None):
         channel = target_channel or interaction.channel
