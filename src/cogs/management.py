@@ -9,9 +9,9 @@ from discord import Permissions, app_commands
 from discord.ext import commands, tasks
 
 from src.bot import AethorBot
-from src.config import ConfigModel, get_config
 from src.utils import rcon
 from src.utils.backup import backup_whitelist
+from src.utils.config import ConfigModel, get_config
 from src.utils.store import (
     add_to_whitelist,
     read_whitelist,
@@ -24,7 +24,7 @@ CONFIG: ConfigModel = get_config()
 class Management(commands.Cog):
     def __init__(self, bot: AethorBot):
         self.bot = bot
-        if CONFIG.auto_sync.enabled:
+        if CONFIG.bot.auto_sync.enabled:
             self.auto_sync_loop.start()
         self._sync_last: dict[int, datetime.datetime] = {}
         self._name_regex = re.compile(r"^[A-Za-z0-9_]{3,16}$")
@@ -34,7 +34,7 @@ class Management(commands.Cog):
         if not last:
             return 0
         delta = datetime.datetime.now() - last
-        remaining = CONFIG.auto_sync.cooldown_seconds - int(delta.total_seconds())
+        remaining = CONFIG.bot.auto_sync.cooldown_seconds - int(delta.total_seconds())
         return remaining if remaining > 0 else 0
 
     def _parse_names_from_bytes(self, data: bytes) -> list[str]:
@@ -71,10 +71,12 @@ class Management(commands.Cog):
         return out
 
     def _next_sync_text(self) -> str:
-        if not CONFIG.auto_sync.enabled:
+        if not CONFIG.bot.auto_sync.enabled:
             return "disabled"
         now = datetime.datetime.now()
-        target = now.replace(hour=CONFIG.auto_sync.hour, minute=CONFIG.auto_sync.minute, second=0, microsecond=0)
+        target = now.replace(
+            hour=CONFIG.bot.auto_sync.hour, minute=CONFIG.bot.auto_sync.minute, second=0, microsecond=0
+        )
         if target <= now:
             target = target + datetime.timedelta(days=1)
         return target.strftime("%Y-%m-%d %H:%M")
@@ -216,8 +218,8 @@ class Management(commands.Cog):
         self._sync_last[interaction.user.id] = datetime.datetime.now()
         backup_whitelist()
 
-        if CONFIG.channels.log_channel_id:
-            chan = CONFIG.channels.log_channel
+        if CONFIG.bot.channels.log_channel_id:
+            chan = CONFIG.bot.channels.log_channel
             if isinstance(chan, discord.TextChannel):
                 ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
                 msg = f"Manual whitelist sync by {interaction.user.mention} ({ts})\n" + "\n".join(summary)
@@ -302,8 +304,8 @@ class Management(commands.Cog):
         await interaction.followup.send("Import complete.\n" + "\n".join(summary), ephemeral=True)
         backup_whitelist()
 
-        if CONFIG.channels.log_channel_id:
-            chan = CONFIG.channels.log_channel
+        if CONFIG.bot.channels.log_channel_id:
+            chan = CONFIG.bot.channels.log_channel
             if isinstance(chan, discord.TextChannel):
                 try:
                     await chan.send(
@@ -353,12 +355,12 @@ class Management(commands.Cog):
     # ============== LOOP ==============
 
     # Scheduled auto-sync via tasks.loop
-    @tasks.loop(time=datetime.time(hour=CONFIG.auto_sync.hour, minute=CONFIG.auto_sync.minute))
+    @tasks.loop(time=datetime.time(hour=CONFIG.bot.auto_sync.hour, minute=CONFIG.bot.auto_sync.minute))
     async def auto_sync_loop(self):
         if not rcon.is_enabled():
             # Optionally announce skipped run
-            if CONFIG.channels.log_channel_id:
-                channel = CONFIG.channels.log_channel
+            if CONFIG.bot.channels.log_channel_id:
+                channel = CONFIG.bot.channels.log_channel
                 try:
                     await channel.send("Nightly whitelist sync skipped: RCON disabled.")
                 except Exception:
@@ -370,8 +372,8 @@ class Management(commands.Cog):
             server = set(rcon.whitelist_list())
         except Exception:
             # Optionally announce error
-            if CONFIG.channels.log_channel_id:
-                channel = CONFIG.channels.log_channel
+            if CONFIG.bot.channels.log_channel_id:
+                channel = CONFIG.bot.channels.log_channel
                 try:
                     await channel.send("Nightly whitelist sync failed: unable to fetch server list via RCON.")
                 except Exception:
@@ -379,7 +381,7 @@ class Management(commands.Cog):
             return
 
         to_add = sorted(local - server)
-        to_remove = sorted(server - local) if CONFIG.auto_sync.remove_extras else []
+        to_remove = sorted(server - local) if CONFIG.bot.auto_sync.remove_extras else []
 
         added = 0
         removed = 0
@@ -396,13 +398,13 @@ class Management(commands.Cog):
             except Exception:
                 pass
 
-        if CONFIG.channels.log_channel_id:
-            channel = CONFIG.channels.log_channel
+        if CONFIG.bot.channels.log_channel_id:
+            channel = CONFIG.bot.channels.log_channel
             timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
             msg = (
                 f"Nightly whitelist sync ({timestamp})\n"
                 f"Added: {added} (local→server)\n"
-                f"Removed: {removed}{' (extras pruned)' if CONFIG.auto_sync.remove_extras else ''}"
+                f"Removed: {removed}{' (extras pruned)' if CONFIG.bot.auto_sync.remove_extras else ''}"
             )
             try:
                 await channel.send(msg)

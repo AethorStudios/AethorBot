@@ -1,7 +1,7 @@
 from mcstatus import JavaServer
 
-from src.config import ConfigModel, get_config
 from src.utils import rcon
+from src.utils.config import ConfigModel, get_config
 
 CONFIG: ConfigModel = get_config()
 
