@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field, SecretStr, ValidationError
 from pydantic.types import NonNegativeInt, PositiveInt  # noqa
 
 if TYPE_CHECKING:
-    import discord
+    from discord import Guild, Role, TextChannel
 
     from src.bot import AethorBot
 
@@ -28,20 +28,20 @@ class RolesConfig(BaseModel):
     admin_role_ids: list[NonNegativeInt] = Field(default_factory=list)
 
     @property
-    def verified_role(self) -> discord.Role | None:
+    def verified_role(self) -> Role | None:
         if BOT and self.verified_role_id != 0 and BOT.config.bot.guild:
             return BOT.config.bot.guild.get_role(int(self.verified_role_id))
         return None
 
     @property
-    def mute_role(self) -> discord.Role | None:
+    def mute_role(self) -> Role | None:
         if BOT and self.mute_role_id != 0 and BOT.config.bot.guild:
             return BOT.config.bot.guild.get_role(int(self.mute_role_id))
         return None
 
     @property
-    def admin_roles(self) -> list[discord.Role]:
-        roles: list[discord.Role] = []
+    def admin_roles(self) -> list[Role]:
+        roles: list[Role] = []
         if BOT and BOT.config.bot.guild:
             guild = BOT.config.bot.guild
             for role_id in self.admin_role_ids:
@@ -57,19 +57,19 @@ class ChannelsConfig(BaseModel):
     verify_log_channel_id: NonNegativeInt = 0
 
     @property
-    def log_channel(self) -> discord.TextChannel | None:
+    def log_channel(self) -> TextChannel | None:
         if BOT and self.log_channel_id != 0:
             return BOT.get_channel(int(self.log_channel_id))
         return None
 
     @property
-    def mod_log_channel(self) -> discord.TextChannel | None:
+    def mod_log_channel(self) -> TextChannel | None:
         if BOT and self.mod_log_channel_id != 0:
             return BOT.get_channel(int(self.mod_log_channel_id))
         return None
 
     @property
-    def verify_log_channel(self) -> discord.TextChannel | None:
+    def verify_log_channel(self) -> TextChannel | None:
         if BOT and self.verify_log_channel_id != 0:
             return BOT.get_channel(int(self.verify_log_channel_id))
         return None
@@ -101,7 +101,7 @@ class BotConfig(BaseModel):
     logs: FileLogsConfig = Field(default_factory=FileLogsConfig)
 
     @property
-    def guild(self) -> discord.Guild | None:
+    def guild(self) -> Guild | None:
         if BOT:
             return BOT.get_guild(int(self.guild_id))
         return None
