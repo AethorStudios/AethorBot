@@ -5,7 +5,7 @@ from discord import Permissions, app_commands
 from discord.ext import commands
 
 from src.bot import AethorBot
-from src.config import ConfigModel, get_config
+from src.utils.config import ConfigModel, get_config
 
 CONFIG: ConfigModel = get_config()
 
@@ -142,11 +142,11 @@ class Admin(commands.Cog):
     @app_commands.checks.has_permissions(administrator=True)
     async def sync_commands(self, interaction: discord.Interaction):
         try:
-            if CONFIG.discord.guild_id:
-                self.bot.tree.copy_global_to(guild=discord.Object(id=CONFIG.discord.guild_id))
-                commands_synced = await self.bot.tree.sync(guild=discord.Object(id=CONFIG.discord.guild_id))
+            if CONFIG.bot.guild_id:
+                self.bot.tree.copy_global_to(guild=discord.Object(id=CONFIG.bot.guild_id))
+                commands_synced = await self.bot.tree.sync(guild=discord.Object(id=CONFIG.bot.guild_id))
                 await interaction.response.send_message(
-                    f"Synced {len(commands_synced)} slash commands to guild {CONFIG.discord.guild_id}.", ephemeral=True
+                    f"Synced {len(commands_synced)} slash commands to guild {CONFIG.bot.guild_id}.", ephemeral=True
                 )
             else:
                 commands_synced = await self.bot.tree.sync()
@@ -160,11 +160,11 @@ class Admin(commands.Cog):
     @commands.has_permissions(administrator=True)
     async def sync_commands_prefix(self, ctx: commands.Context):
         try:
-            if CONFIG.discord.guild_id:
-                self.bot.tree.copy_global_to(guild=discord.Object(id=CONFIG.discord.guild_id))
-                commands_synced = await self.bot.tree.sync(guild=discord.Object(id=CONFIG.discord.guild_id))
+            if CONFIG.bot.guild_id:
+                self.bot.tree.copy_global_to(guild=discord.Object(id=CONFIG.bot.guild_id))
+                commands_synced = await self.bot.tree.sync(guild=discord.Object(id=CONFIG.bot.guild_id))
                 await ctx.reply(
-                    f"Synced {len(commands_synced)} slash commands to guild {CONFIG.discord.guild_id}.", delete_after=10
+                    f"Synced {len(commands_synced)} slash commands to guild {CONFIG.bot.guild_id}.", delete_after=10
                 )
             else:
                 commands_synced = await self.bot.tree.sync()

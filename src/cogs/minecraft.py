@@ -4,7 +4,7 @@ from discord.ext import commands
 from mcstatus import JavaServer
 
 from src.bot import AethorBot
-from src.config import ConfigModel, get_config
+from src.utils.config import ConfigModel, get_config
 
 CONFIG: ConfigModel = get_config()
 

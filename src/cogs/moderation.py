@@ -5,7 +5,7 @@ from discord import Permissions, app_commands
 from discord.ext import commands
 
 from src.bot import AethorBot
-from src.config import ConfigModel, get_config
+from src.utils.config import ConfigModel, get_config
 from src.utils.modlog import send_mod_log
 
 CONFIG: ConfigModel = get_config()

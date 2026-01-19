@@ -22,18 +22,6 @@ BOT: AethorBot | None = None
 # ============== CONFIG MODELS ==============
 
 
-class DiscordConfig(BaseModel):
-    token: SecretStr = Field(default=SecretStr(""))
-    guild_id: NonNegativeInt = 0
-    application_id: NonNegativeInt = 0
-
-    @property
-    def guild(self) -> discord.Guild | None:
-        if BOT:
-            return BOT.get_guild(int(self.guild_id))
-        return None
-
-
 class RolesConfig(BaseModel):
     verified_role_id: NonNegativeInt = 0
     mute_role_id: NonNegativeInt = 0
@@ -41,21 +29,21 @@ class RolesConfig(BaseModel):
 
     @property
     def verified_role(self) -> discord.Role | None:
-        if BOT and self.verified_role_id != 0 and BOT.config.discord.guild:
-            return BOT.config.discord.guild.get_role(int(self.verified_role_id))
+        if BOT and self.verified_role_id != 0 and BOT.config.bot.guild:
+            return BOT.config.bot.guild.get_role(int(self.verified_role_id))
         return None
 
     @property
     def mute_role(self) -> discord.Role | None:
-        if BOT and self.mute_role_id != 0 and BOT.config.discord.guild:
-            return BOT.config.discord.guild.get_role(int(self.mute_role_id))
+        if BOT and self.mute_role_id != 0 and BOT.config.bot.guild:
+            return BOT.config.bot.guild.get_role(int(self.mute_role_id))
         return None
 
     @property
     def admin_roles(self) -> list[discord.Role]:
         roles: list[discord.Role] = []
-        if BOT and BOT.config.discord.guild:
-            guild = BOT.config.discord.guild
+        if BOT and BOT.config.bot.guild:
+            guild = BOT.config.bot.guild
             for role_id in self.admin_role_ids:
                 role = guild.get_role(int(role_id))
                 if role:
@@ -95,13 +83,28 @@ class AutoSyncConfig(BaseModel):
     cooldown_seconds: NonNegativeInt = 30
 
 
-class MinecraftConfig(BaseModel):
-    host: str = "play.example.com"
-    port: PositiveInt = 25565
+class FileLogsConfig(BaseModel):
+    enabled: bool = True
+    path: Path = Path("logs/aethor.log")
+    max_bytes: NonNegativeInt = 1_048_576
+    backup_count: NonNegativeInt = 5
+
+
+class BotConfig(BaseModel):
+    token: SecretStr = Field(default=SecretStr(""))
+    guild_id: NonNegativeInt = 0
+    application_id: NonNegativeInt = 0
+
+    roles: RolesConfig = Field(default_factory=RolesConfig)
+    channels: ChannelsConfig = Field(default_factory=ChannelsConfig)
+    auto_sync: AutoSyncConfig = Field(default_factory=AutoSyncConfig)
+    logs: FileLogsConfig = Field(default_factory=FileLogsConfig)
 
     @property
-    def address(self) -> str:
-        return f"{self.host}:{self.port}"
+    def guild(self) -> discord.Guild | None:
+        if BOT:
+            return BOT.get_guild(int(self.guild_id))
+        return None
 
 
 class RconConfig(BaseModel):
@@ -121,11 +124,17 @@ class HealthcheckConfig(BaseModel):
     port: PositiveInt = int(getenv("PORT", "8080"))
 
 
-class FileLogsConfig(BaseModel):
-    enabled: bool = True
-    path: Path = Path("logs/aethor.log")
-    max_bytes: NonNegativeInt = 1_048_576
-    backup_count: NonNegativeInt = 5
+class MinecraftConfig(BaseModel):
+    host: str = "play.example.com"
+    port: PositiveInt = 25565
+
+    rcon: RconConfig = Field(default_factory=RconConfig)
+    whitelist_backup: BackupConfig = Field(default_factory=BackupConfig)
+    healthcheck: HealthcheckConfig = Field(default_factory=HealthcheckConfig)
+
+    @property
+    def address(self) -> str:
+        return f"{self.host}:{self.port}"
 
 
 class ConfigModel(BaseModel):
@@ -137,36 +146,26 @@ class ConfigModel(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    discord: DiscordConfig = Field(default_factory=DiscordConfig)
-    roles: RolesConfig = Field(default_factory=RolesConfig)
-    channels: ChannelsConfig = Field(default_factory=ChannelsConfig)
-
+    bot: BotConfig = Field(default_factory=BotConfig)
     minecraft: MinecraftConfig = Field(default_factory=MinecraftConfig)
-    rcon: RconConfig = Field(default_factory=RconConfig)
-    auto_sync: AutoSyncConfig = Field(default_factory=AutoSyncConfig)
-    backup: BackupConfig = Field(default_factory=BackupConfig)
-    healthcheck: HealthcheckConfig = Field(default_factory=HealthcheckConfig)
-    file_logs: FileLogsConfig = Field(default_factory=FileLogsConfig)
 
     def validate_required_runtime(self) -> None:
         """
         Enforce that placeholders were replaced.
         Call this after load, before actually running the bot.
         """
-        token = self.discord.token.get_secret_value().strip()
+        token = self.bot.token.get_secret_value().strip()
         if not token or token == "":
-            raise RuntimeError("discord.token is not set.")
+            raise RuntimeError("bot.token is not set.")
 
-        # Discord IDs should be real snowflakes, not 0.
-        # If you ever *want* to allow 0 for some env, loosen these.
         required_ids = {
-            "discord.guild_id": self.discord.guild_id,
-            "discord.application_id": self.discord.application_id,
-            "roles.verified_role_id": self.roles.verified_role_id,
-            "roles.mute_role_id": self.roles.mute_role_id,
-            "channels.log_channel_id": self.channels.log_channel_id,
-            "channels.mod_log_channel_id": self.channels.mod_log_channel_id,
-            "channels.verify_log_channel_id": self.channels.verify_log_channel_id,
+            "bot.guild_id": self.bot.guild_id,
+            "bot.application_id": self.bot.application_id,
+            "bot.roles.verified_role_id": self.bot.roles.verified_role_id,
+            "bot.roles.mute_role_id": self.bot.roles.mute_role_id,
+            "bot.channels.log_channel_id": self.bot.channels.log_channel_id,
+            "bot.channels.mod_log_channel_id": self.bot.channels.mod_log_channel_id,
+            "bot.channels.verify_log_channel_id": self.bot.channels.verify_log_channel_id,
         }
         missing = [k for k, v in required_ids.items() if int(v) == 0]
         if missing:

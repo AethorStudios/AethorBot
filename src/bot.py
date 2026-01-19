@@ -7,8 +7,8 @@ import discord
 from discord.ext import commands
 from pretty_help import PrettyHelp
 
-from src.config import ConfigModel, load_config, resolve_config_values
 from src.utils.args import RuntimeArgs, get_runtime_args
+from src.utils.config import ConfigModel, load_config, resolve_config_values
 from src.utils.health import make_status_func, start_health_server
 from src.utils.logger import setup_logging
 
@@ -43,12 +43,14 @@ class AethorBot(commands.Bot):
         await load_cogs(self)
 
         # Start healthcheck server after cogs load
-        if self.config.healthcheck.enabled:
+        if self.config.minecraft.healthcheck.enabled:
             started_at = getattr(self, "_started_at", time.time())
             self._started_at = started_at
             try:
-                start_health_server(self.config.healthcheck.port, make_status_func(self, started_at))
-                logging.getLogger("Aethor").info(f"Healthcheck server listening on :{self.config.healthcheck.port}")
+                start_health_server(self.config.minecraft.healthcheck.port, make_status_func(self, started_at))
+                logging.getLogger("Aethor").info(
+                    f"Healthcheck server listening on :{self.config.minecraft.healthcheck.port}"
+                )
             except Exception as e:
                 logging.getLogger("Aethor").warning(f"Failed to start healthcheck server: {e}")
 
@@ -61,7 +63,7 @@ def build_bot(config: ConfigModel, args: RuntimeArgs) -> commands.Bot:
         args=args,
         command_prefix="!",
         intents=intents,
-        application_id=config.discord.application_id,
+        application_id=config.bot.application_id,
         help_command=PrettyHelp(),
     )
     return bot
@@ -96,17 +98,17 @@ def main() -> None:
         resolve_config_values(bot)
         if args.sync:
             try:
-                if config.discord.guild_id:
-                    bot.tree.copy_global_to(guild=discord.Object(id=config.discord.guild_id))
-                    commands_synced = await bot.tree.sync(guild=discord.Object(id=config.discord.guild_id))
-                    logger.info(f"Synced {len(commands_synced)} slash commands to guild {config.discord.guild_id}")
+                if config.bot.guild_id:
+                    bot.tree.copy_global_to(guild=discord.Object(id=config.bot.guild_id))
+                    commands_synced = await bot.tree.sync(guild=discord.Object(id=config.bot.guild_id))
+                    logger.info(f"Synced {len(commands_synced)} slash commands to guild {config.bot.guild_id}")
                 else:
                     commands_synced = await bot.tree.sync()
                     logger.info(f"Synced {len(commands_synced)} global slash commands")
             except Exception as e:
                 logger.exception(f"Failed to sync commands: {e}")
 
-    bot.run(config.discord.token.get_secret_value(), log_handler=None)
+    bot.run(config.bot.token.get_secret_value(), log_handler=None)
 
 
 if __name__ == "__main__":
