@@ -3,6 +3,5 @@
 .env
 logs/
 data/
-config.yaml
-config.yml
-config.y*.bak
+config.y*ml
+config.y*ml.bak
