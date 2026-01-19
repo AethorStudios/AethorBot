@@ -1,7 +1,8 @@
 import discord
-from discord import app_commands
+from discord import Permissions, app_commands
 from discord.ext import commands
 
+from src.bot import AethorBot
 from src.config import ConfigModel, get_config
 from src.utils import rcon
 from src.utils.mc_online import is_player_online
@@ -13,7 +14,7 @@ CONFIG: ConfigModel = get_config()
 
 
 class Onboarding(commands.Cog):
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: AethorBot):
         self.bot = bot
 
     @app_commands.command(name="verify", description="Link your Minecraft name and get verified")
@@ -108,9 +109,13 @@ class Onboarding(commands.Cog):
 
         await interaction.followup.send((removed_msg + role_msg + "Unverified.").strip(), ephemeral=True)
 
-    @app_commands.command(name="verify_user", description="Admin: Verify a user with given Minecraft name")
+    verification_management = app_commands.Group(
+        name="verification", description="Admin commands for user verification"
+    )
+    verification_management.default_permissions = Permissions(administrator=True)
+
+    @verification_management.command(name="verify", description="Admin: Verify a user with given Minecraft name")
     @app_commands.describe(user="Discord user to verify", name="Minecraft in-game name")
-    @app_commands.default_permissions(administrator=True)
     @app_commands.checks.has_permissions(administrator=True)
     async def verify_other_user(self, interaction: discord.Interaction, user: discord.User, name: str):
         await interaction.response.defer(ephemeral=True)
@@ -152,8 +157,7 @@ class Onboarding(commands.Cog):
 
         await interaction.followup.send(msg.strip(), ephemeral=True)
 
-    @app_commands.command(name="unverify_user", description="Admin: Unverify a user, remove role and whitelist")
-    @app_commands.default_permissions(administrator=True)
+    @verification_management.command(name="unverify", description="Admin: Unverify a user, remove role and whitelist")
     @app_commands.checks.has_permissions(administrator=True)
     async def unverify_other_user(self, interaction: discord.Interaction, user: discord.User):
         await interaction.response.defer(ephemeral=True)
@@ -203,9 +207,20 @@ class Onboarding(commands.Cog):
 
         await interaction.followup.send((removed_msg + role_msg + "User unverified.").strip(), ephemeral=True)
 
-    @app_commands.command(name="whois", description="Look up a user's linked Minecraft account")
+    @verification_management.command(name="change", description="Change a user's linked Minecraft account")
+    @app_commands.describe(user="Discord user to change", name="New Minecraft in-game name")
+    @app_commands.checks.has_permissions(administrator=True)
+    async def change_user_mc_account(self, interaction: discord.Interaction, user: discord.User, name: str):
+        await interaction.response.defer(ephemeral=True)
+        mc_user = await fetch_player_by_username(name)
+        if not mc_user:
+            await interaction.followup.send("Could not find that Minecraft name. Check spelling.", ephemeral=True)
+            return
+        set_player(user.id, mc_user.username, mc_user.uuid)
+
+    @verification_management.command(name="whois", description="Look up a user's linked Minecraft account")
     @app_commands.describe(user="Discord user to look up")
-    @app_commands.checks.has_role(CONFIG.roles.verified_role_id)
+    @app_commands.checks.has_permissions(administrator=True)
     async def whois_user(self, interaction: discord.Interaction, user: discord.User | None = None):
         target = user or interaction.user
         record = get_player(target.id)
@@ -217,5 +232,5 @@ class Onboarding(commands.Cog):
         )
 
 
-async def setup(bot: commands.Bot):
+async def setup(bot: AethorBot):
     await bot.add_cog(Onboarding(bot))

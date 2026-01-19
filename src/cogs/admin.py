@@ -4,13 +4,14 @@ import discord
 from discord import Permissions, app_commands
 from discord.ext import commands
 
+from src.bot import AethorBot
 from src.config import ConfigModel, get_config
 
 CONFIG: ConfigModel = get_config()
 
 
 class Admin(commands.Cog):
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: AethorBot):
         self.bot = bot
 
     # ============== COG FUNCTIONS ==============
@@ -172,5 +173,5 @@ class Admin(commands.Cog):
             await ctx.reply(f"Failed to sync commands: {e}", delete_after=10)
 
 
-async def setup(bot: commands.Bot):
+async def setup(bot: AethorBot):
     await bot.add_cog(Admin(bot))

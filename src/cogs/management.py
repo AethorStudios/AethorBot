@@ -8,6 +8,7 @@ import discord
 from discord import Permissions, app_commands
 from discord.ext import commands, tasks
 
+from src.bot import AethorBot
 from src.config import ConfigModel, get_config
 from src.utils import rcon
 from src.utils.backup import backup_whitelist
@@ -21,7 +22,7 @@ CONFIG: ConfigModel = get_config()
 
 
 class Management(commands.Cog):
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: AethorBot):
         self.bot = bot
         if CONFIG.auto_sync.enabled:
             self.auto_sync_loop.start()
@@ -414,5 +415,5 @@ class Management(commands.Cog):
         await self.bot.wait_until_ready()
 
 
-async def setup(bot: commands.Bot):
+async def setup(bot: AethorBot):
     await bot.add_cog(Management(bot))

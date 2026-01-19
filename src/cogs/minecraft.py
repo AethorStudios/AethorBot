@@ -3,6 +3,7 @@ from discord import app_commands
 from discord.ext import commands
 from mcstatus import JavaServer
 
+from src.bot import AethorBot
 from src.config import ConfigModel, get_config
 
 CONFIG: ConfigModel = get_config()
@@ -15,7 +16,7 @@ async def query_status(address: str):
 
 
 class Minecraft(commands.Cog):
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: AethorBot):
         self.bot = bot
 
     @app_commands.command(name="mcstatus", description="Check Minecraft server status")
@@ -36,5 +37,5 @@ class Minecraft(commands.Cog):
             await interaction.response.send_message(f"Failed to query status: {e}", ephemeral=True)
 
 
-async def setup(bot: commands.Bot):
+async def setup(bot: AethorBot):
     await bot.add_cog(Minecraft(bot))

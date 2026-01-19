@@ -4,6 +4,7 @@ import discord
 from discord import Permissions, app_commands
 from discord.ext import commands
 
+from src.bot import AethorBot
 from src.config import ConfigModel, get_config
 from src.utils.modlog import send_mod_log
 
@@ -11,7 +12,7 @@ CONFIG: ConfigModel = get_config()
 
 
 class Moderation(commands.Cog):
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: AethorBot):
         self.bot = bot
 
     # Member moderation
@@ -175,5 +176,5 @@ class Moderation(commands.Cog):
             await interaction.response.send_message(f"Failed to unlock: {e}", ephemeral=True)
 
 
-async def setup(bot: commands.Bot):
+async def setup(bot: AethorBot):
     await bot.add_cog(Moderation(bot))
