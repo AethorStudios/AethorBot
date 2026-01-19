@@ -225,7 +225,7 @@ def save_config(path: Path, config: ConfigModel) -> None:
     data = _yaml_safe(config.model_dump(exclude_unset=False, mode="python"))
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as f:
-        yaml.safe_dump(data, f, sort_keys=False)
+        yaml.safe_dump(data, f, sort_keys=False, indent=4)
 
 
 def set_global_config(config: ConfigModel) -> None:

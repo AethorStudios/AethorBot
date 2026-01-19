@@ -4,3 +4,5 @@
 logs/
 data/
 config.yaml
+config.yml
+config.y*.bak
