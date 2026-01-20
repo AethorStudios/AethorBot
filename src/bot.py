@@ -9,7 +9,7 @@ from pretty_help import PrettyHelp
 
 from src.utils.args import RuntimeArgs, get_runtime_args
 from src.utils.config import ConfigModel, load_config, resolve_config_values
-from src.utils.database.sql_database import close_local_database, get_current_session, initialize_local_database
+from src.utils.database.sql_database import close_local_database, initialize_local_database
 from src.utils.health import make_status_func, start_health_server
 from src.utils.logger import setup_logging
 

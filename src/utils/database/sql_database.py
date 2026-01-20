@@ -2,20 +2,14 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import select
-from sqlalchemy.dialects.mysql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.orm import selectinload
 
 from src.utils.config import ConfigModel, get_config
-from src.utils.database.database_models import Base, LinkedPlayer
+from src.utils.database.database_models import Base
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping, Sequence
-
     from sqlalchemy.ext.asyncio import AsyncEngine
 
 AsyncSQLSession: async_sessionmaker[AsyncSession]
