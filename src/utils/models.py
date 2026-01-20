@@ -1,12 +1,12 @@
-from datetime import UTC, datetime
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
+from uuid import UUID
 
-from sqlalchemy.orm import DeclarativeBase, MappedAsDataclass
-
-
-def utcnow():
-    """Return the current timestamp in UTC."""
-    return datetime.now(UTC)
+if TYPE_CHECKING:
+    from yarl import URL
 
 
-class Base(MappedAsDataclass, DeclarativeBase):
-    pass
+@dataclass
+class MinecraftUser:
+    uuid: UUID
+    username: str

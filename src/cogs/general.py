@@ -2,9 +2,11 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
+from src.bot import AethorBot
+
 
 class General(commands.Cog):
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: AethorBot):
         self.bot = bot
 
     @app_commands.command(name="ping", description="Check bot latency")
@@ -15,8 +17,8 @@ class General(commands.Cog):
 
     @app_commands.command(name="about", description="About Aethor bot")
     async def about(self, interaction: discord.Interaction):
-        await interaction.response.send_message("Aethor Bot — Minecraft MMORPG companion.")
+        await interaction.response.send_message("Aethor Bot — Minecraft MMORPG companion.", ephemeral=True)
 
 
-async def setup(bot: commands.Bot):
+async def setup(bot: AethorBot):
     await bot.add_cog(General(bot))
