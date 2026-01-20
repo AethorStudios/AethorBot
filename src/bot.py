@@ -9,6 +9,7 @@ from pretty_help import PrettyHelp
 
 from src.utils.args import RuntimeArgs, get_runtime_args
 from src.utils.config import ConfigModel, load_config, resolve_config_values
+from src.utils.database.sql_database import close_local_database, get_current_session, initialize_local_database
 from src.utils.health import make_status_func, start_health_server
 from src.utils.logger import setup_logging
 
@@ -54,6 +55,10 @@ class AethorBot(commands.Bot):
             except Exception as e:
                 logging.getLogger("Aethor").warning(f"Failed to start healthcheck server: {e}")
 
+    async def close(self) -> None:
+        await close_local_database()
+        await super().close()
+
 
 def build_bot(config: ConfigModel, args: RuntimeArgs) -> commands.Bot:
     intents = discord.Intents.default()
@@ -85,7 +90,9 @@ def main() -> None:
     if args.check:
         # Load extensions in an async context to validate without running the bot
         try:
+            asyncio.run(initialize_local_database())
             asyncio.run(bot.setup_hook())
+            asyncio.run(close_local_database())
             logger.info("Smoke-check complete: config imported and cogs loaded.")
             sys.exit(0)
         except Exception as e:
@@ -96,6 +103,7 @@ def main() -> None:
     async def on_ready():
         logger.info(f"Logged in as {bot.user} (ID: {bot.user.id})")
         resolve_config_values(bot)
+        await initialize_local_database()
         if args.sync:
             try:
                 if config.bot.guild_id:

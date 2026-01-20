@@ -7,7 +7,7 @@ from src.utils import rcon
 from src.utils.config import ConfigModel, get_config
 from src.utils.mc_online import is_player_online
 from src.utils.mojang import fetch_player_by_username
-from src.utils.players import delete_player, get_player, set_player
+from src.utils.players import edit_player, get_player, set_player, unlink_player
 from src.utils.store import add_to_whitelist, remove_from_whitelist
 
 CONFIG: ConfigModel = get_config()
@@ -25,7 +25,7 @@ class Onboarding(commands.Cog):
         if not user:
             await interaction.followup.send("Could not find that Minecraft name. Check spelling.", ephemeral=True)
             return
-        set_player(interaction.user.id, user.username, user.uuid)
+        await set_player(interaction.user.id, user.uuid, user.username)
 
         added = add_to_whitelist(user.username)
         msg = f"Linked {user.username} (UUID: {user.uuid}). "
@@ -60,11 +60,11 @@ class Onboarding(commands.Cog):
     @app_commands.checks.has_role(CONFIG.bot.roles.verified_role_id)
     async def unverify_self(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
-        record = get_player(interaction.user.id)
+        record = await get_player(interaction.user.id)
         if not record:
             await interaction.followup.send("You have no linked account.", ephemeral=True)
             return
-        mc_name = record.get("name") or ""
+        mc_name = record.username or ""
 
         if await is_player_online(mc_name):
             await interaction.followup.send(
@@ -97,7 +97,7 @@ class Onboarding(commands.Cog):
                     pass
 
         # Delete mapping
-        delete_player(interaction.user.id)
+        await unlink_player(interaction.user.id)
 
         # Log
         if CONFIG.bot.channels.verify_log_channel_id:
@@ -123,7 +123,7 @@ class Onboarding(commands.Cog):
         if not user:
             await interaction.followup.send("Could not find that Minecraft name. Check spelling.", ephemeral=True)
             return
-        set_player(user.id, mc_user.username, mc_user.uuid)
+        await set_player(user.id, mc_user.uuid, mc_user.username)
 
         added = add_to_whitelist(mc_user.username)
         msg = f"Linked {mc_user.username} (UUID: {mc_user.uuid}) to {user.mention}. "
@@ -161,8 +161,8 @@ class Onboarding(commands.Cog):
     @app_commands.checks.has_permissions(administrator=True)
     async def unverify_other_user(self, interaction: discord.Interaction, user: discord.User):
         await interaction.response.defer(ephemeral=True)
-        record = get_player(user.id)
-        mc_name = record.get("name") if record else None
+        record = await get_player(user.id)
+        mc_name = record.username if record else None
 
         if mc_name and await is_player_online(mc_name):
             await interaction.followup.send(
@@ -194,7 +194,7 @@ class Onboarding(commands.Cog):
                     pass
 
         if record:
-            delete_player(user.id)
+            await unlink_player(user.id)
 
         if CONFIG.bot.channels.verify_log_channel_id:
             channel = CONFIG.bot.channels.verify_log_channel
@@ -216,19 +216,19 @@ class Onboarding(commands.Cog):
         if not mc_user:
             await interaction.followup.send("Could not find that Minecraft name. Check spelling.", ephemeral=True)
             return
-        set_player(user.id, mc_user.username, mc_user.uuid)
+        await edit_player(user.id, mc_user.uuid, mc_user.username)
 
     @verification_management.command(name="whois", description="Look up a user's linked Minecraft account")
     @app_commands.describe(user="Discord user to look up")
     @app_commands.checks.has_permissions(administrator=True)
     async def whois_user(self, interaction: discord.Interaction, user: discord.User | None = None):
         target = user or interaction.user
-        record = get_player(target.id)
+        record = await get_player(target.id)
         if not record:
             await interaction.response.send_message("No linked account.", ephemeral=True)
             return
         await interaction.response.send_message(
-            f"{target.mention}: {record.get('name')} (UUID: {record.get('uuid')})", ephemeral=True
+            f"{target.mention}: {record.username} (UUID: {record.uuid})", ephemeral=True
         )
 
 

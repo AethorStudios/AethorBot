@@ -32,7 +32,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.ruff]
 line-length = 120
-target-version = "py311"
+target-version = "py310"
 
 
 [tool.ruff.lint]
@@ -55,7 +55,7 @@ ignore = [
     "N806",   # Uppercase variables in functions
     "E501",   # Suppress line-too-long, let formatter decide
     "COM812", # missing-trailing-comma
-    "F401",   # Ignore unused imports
+    # "F401",   # Ignore unused imports
 ]
 
 [tool.ruff.lint.pydocstyle]

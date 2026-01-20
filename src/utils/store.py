@@ -26,7 +26,6 @@ def read_whitelist() -> list[str]:
 
 
 def write_whitelist(entries: list[str]) -> None:
-    ensure_files()
     entries = sorted({e.strip() for e in entries if e.strip()})
     with open(WHITELIST_PATH, "w", encoding="utf-8") as f:
         json.dump(entries, f, ensure_ascii=False, indent=4)

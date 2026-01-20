@@ -1,55 +1,55 @@
-import json
-import os
-from typing import Any
+from typing import TYPE_CHECKING, Any
+from uuid import UUID
 
-DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "..", "data")
-PLAYERS_PATH = os.path.normpath(os.path.join(DATA_DIR, "players.json"))
+from sqlalchemy import select
 
-
-def ensure_files() -> None:
-    os.makedirs(DATA_DIR, exist_ok=True)
-    if not os.path.exists(PLAYERS_PATH):
-        with open(PLAYERS_PATH, "w", encoding="utf-8") as f:
-            json.dump({}, f)
+from src.utils.database.database_models import LinkedPlayer
+from src.utils.database.sql_database import get_current_session
 
 
-def read_players() -> dict[str, Any]:
-    ensure_files()
-    with open(PLAYERS_PATH, encoding="utf-8") as f:
-        try:
-            data = json.load(f)
-        except Exception:
-            data = {}
-    if not isinstance(data, dict):
-        return {}
-    return data
+async def set_player(discord_id: int, uuid: UUID, username: str) -> LinkedPlayer:
+    async with get_current_session() as session:
+        async with session.begin():
+            new_player = LinkedPlayer(
+                discord_id=discord_id,
+                uuid=str(uuid),
+                username=username,
+            )
+            session.add(new_player)
+            return new_player
 
 
-def write_players(data: dict[str, Any]) -> None:
-    ensure_files()
-    with open(PLAYERS_PATH, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+async def edit_player(discord_id: int, uuid: UUID, username: str) -> LinkedPlayer | None:
+    async with get_current_session() as session:
+        async with session.begin():
+            result = await session.execute(select(LinkedPlayer).where(LinkedPlayer.discord_id == discord_id))
+            player = result.scalars().first()
+            if player:
+                player.uuid = str(uuid)
+                player.username = username
+                session.add(player)
+                return player
+    return None
 
 
-def set_player(discord_id: int, name: str, uuid: str | None) -> None:
-    data = read_players()
-    data[str(discord_id)] = {
-        "name": name,
-        "uuid": uuid or "",
-    }
-    write_players(data)
+async def get_player(discord_id: int) -> LinkedPlayer | None:
+    async with get_current_session() as session:
+        result = await session.execute(select(LinkedPlayer).where(LinkedPlayer.discord_id == discord_id))
+        player = result.scalars().first()
+        return player
 
 
-def get_player(discord_id: int) -> dict[str, Any] | None:
-    data = read_players()
-    return data.get(str(discord_id))
+async def get_players() -> list[LinkedPlayer]:
+    async with get_current_session() as session:
+        result = await session.execute(select(LinkedPlayer))
+        players = result.scalars().all()
+        return players
 
 
-def delete_player(discord_id: int) -> bool:
-    data = read_players()
-    key = str(discord_id)
-    if key in data:
-        data.pop(key)
-        write_players(data)
-        return True
-    return False
+async def unlink_player(discord_id: int) -> None:
+    async with get_current_session() as session:
+        async with session.begin():
+            result = await session.execute(select(LinkedPlayer).where(LinkedPlayer.discord_id == discord_id))
+            player = result.scalars().first()
+            if player:
+                await session.delete(player)
