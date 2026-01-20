@@ -92,6 +92,7 @@ class FileLogsConfig(BaseModel):
 
 class BotConfig(BaseModel):
     token: SecretStr = Field(default=SecretStr(""))
+    local_database_path: Path = Field(default=Path("data/aethor_bot.db"))
     guild_id: NonNegativeInt = 0
     application_id: NonNegativeInt = 0
 
